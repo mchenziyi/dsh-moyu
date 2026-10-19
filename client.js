@@ -102,9 +102,9 @@ window.__ModuleLoader__.load({
       'source.minimal': '最少只需要：站点地址、搜索地址、搜索结果项、目录项、正文容器；标题和链接会自动推导。',
       'source.hint': '填好下面的表单，点「测试书源」验证 搜索 → 目录 → 正文 链路，再保存；也可以先用上面的 AI 解析自动生成。选择器支持 selector@text、selector@href，以及 a || b 多候选。',
       'ai.title': 'AI 解析书源',
-      'ai.hint': '粘贴书源地址（首页或书籍页），用当前默认模型自动生成选择器规则；页面 HTML 会发送给模型。',
+      'ai.hint': '粘贴书源地址（首页或书籍页），用当前默认模型生成选择器规则。解析时会临时搜一本书当样本，只用来学习本站的目录/正文结构，不会加入书架；页面 HTML 会发送给模型。',
       'ai.url': '书源地址，例如 https://example.com',
-      'ai.keyword': '测试关键词（可选，默认「小说」）',
+      'ai.keyword': '样书关键词（可选，用来找一本样本，默认「小说」）',
       'ai.button': 'AI 解析',
       'ai.busy': '解析中…',
       'ai.stageHome': '读取首页…',
@@ -119,9 +119,13 @@ window.__ModuleLoader__.load({
       'ai.done': '解析完成：{name}',
       'ai.failed': 'AI 解析失败：{message}',
       'ai.retry': '选择器校验失败，正在让模型修正…',
-      'ai.saveRead': '保存并开始阅读',
+      'ai.saveSearch': '保存书源并搜索',
+      'ai.saveSampleRead': '保存书源并阅读样书',
       'ai.saving': '保存中…',
-      'ai.saved': '已保存书源并加入书架',
+      'ai.savedSearch': '已保存书源「{name}」，已按「{keyword}」搜到 {count} 条；在下面选一本书加入书架。',
+      'ai.savedNoSearch': '已保存书源「{name}」（这个书源没有搜索规则，只能阅读样书）。',
+      'ai.savedSearchFailed': '已保存书源「{name}」，但搜索失败：{message}；可以直接在下面的搜索框重试。',
+      'ai.sample': '样书：{title}（仅用于解析目录/正文，不会自动加入书架）',
       'ai.searchEmpty': '搜索页没有匹配到结果',
       'ai.tocEmpty': '目录页没有匹配到章节',
       'ai.contentEmpty': '正文页没有匹配到内容',
@@ -245,9 +249,9 @@ window.__ModuleLoader__.load({
       'source.noSearchForm': 'No GET search form on the homepage; fill the search URL manually',
       'source.minimal': 'Minimum: site URL, search URL, search item, TOC item, content container. Titles and links are derived.',
       'ai.title': 'AI source parser',
-      'ai.hint': 'Paste a source URL (homepage or book page) and let the current default model generate the selectors. Page HTML is sent to the model.',
+      'ai.hint': 'Paste a source URL (homepage or book page) and let the current default model generate the selectors. It temporarily searches one book as a TOC/content sample only; that book is not added to the shelf. Page HTML is sent to the model.',
       'ai.url': 'Source URL, e.g. https://example.com',
-      'ai.keyword': 'Test keyword (optional; defaults to 小说)',
+      'ai.keyword': 'Sample keyword (optional, used to find one sample book; defaults to 小说)',
       'ai.button': 'Parse with AI',
       'ai.busy': 'Parsing…',
       'ai.stageHome': 'Reading homepage…',
@@ -262,9 +266,13 @@ window.__ModuleLoader__.load({
       'ai.done': 'Parsed: {name}',
       'ai.failed': 'AI parse failed: {message}',
       'ai.retry': 'Selector check failed; asking the model to fix it…',
-      'ai.saveRead': 'Save and start reading',
+      'ai.saveSearch': 'Save source and search',
+      'ai.saveSampleRead': 'Save source and read the sample',
       'ai.saving': 'Saving…',
-      'ai.saved': 'Source saved and book added to the shelf',
+      'ai.savedSearch': 'Saved "{name}" and searched "{keyword}" ({count} results); add a book below.',
+      'ai.savedNoSearch': 'Saved "{name}" (this source has no search rule; only the sample book can be read).',
+      'ai.savedSearchFailed': 'Saved "{name}", but the search failed: {message}; retry in the search box below.',
+      'ai.sample': 'Sample: {title} (used only to parse TOC/content; not added automatically)',
       'ai.searchEmpty': 'No results matched on the search page',
       'ai.tocEmpty': 'No chapters matched on the contents page',
       'ai.contentEmpty': 'No content matched on the chapter page',
@@ -1439,6 +1447,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         toc: tocRule,
         content: contentRule,
       });
+      log.push('', '提示：解析只生成书源规则，不会加入书架；保存后可在下方搜索任意书名，再把书加入书架。');
       log.push('', JSON.stringify(rule, null, 2));
       return {
         rule,
@@ -1871,6 +1880,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setAiError('');
         setAiOutput('');
         setAiBook(null);
+        setSearchResults(null);
+        setSearchError('');
         setAiStage(t('ai.busy'));
         try {
           const entry = (aiUrl.trim() !== '' ? aiUrl : form.baseUrl).trim();
@@ -1892,18 +1903,60 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         }
       }
 
-      async function saveAiBook() {
+      function saveFormSource(rule) {
+        const current = store.get().settings.sources;
+        setSettings({ sources: [rule, ...current.filter((source) => source.id !== rule.id)] });
+      }
+
+      /** Save the source, then search the sample keyword so the user can pick a book. */
+      async function saveAiSource() {
         if (aiBook === null || aiSaving) return;
         setAiSaving(true);
         setAiError('');
         try {
           const rule = ruleFromForm(form);
-          const current = store.get().settings.sources;
-          setSettings({ sources: [rule, ...current.filter((source) => source.id !== rule.id)] });
+          saveFormSource(rule);
+          if (rule.search === null) {
+            setAiOutput((previous) => `${previous}\n\n${t('ai.savedNoSearch', { name: rule.name })}`);
+            return;
+          }
+          const keyword = aiKeyword.trim() || aiBook.title || '小说';
+          setSearchSourceId(rule.id);
+          setSearchKeyword(keyword);
+          setSearchResults(null);
+          setSearchError('');
+          setSearchBusy(true);
+          try {
+            const results = await searchSource(rule, keyword);
+            setSearchResults(results);
+            setAiOutput((previous) => `${previous}\n\n${t('ai.savedSearch', { name: rule.name, keyword, count: results.length })}`);
+          } catch (failure) {
+            const message = String(failure?.message ?? failure);
+            setSearchError(t('search.failed', { message }));
+            setAiOutput((previous) => `${previous}\n\n${t('ai.savedSearchFailed', { name: rule.name, message })}`);
+          } finally {
+            setSearchBusy(false);
+          }
+          setAiBook(null);
+        } catch (failure) {
+          setAiError(t('ai.failed', { message: String(failure?.message ?? failure) }));
+        } finally {
+          setAiSaving(false);
+        }
+      }
+
+      /** Book-page sources have no search rule; saving them can only mean reading the sample. */
+      async function saveAiSampleBook() {
+        if (aiBook === null || aiSaving) return;
+        setAiSaving(true);
+        setAiError('');
+        try {
+          const rule = ruleFromForm(form);
+          saveFormSource(rule);
           const toc = await fetchToc(rule, aiBook.url);
           if (toc.chapters.length === 0) throw new Error('目录为空');
           addOnlineBookToShelf(rule, { title: aiBook.title, author: aiBook.author, bookUrl: aiBook.url }, toc);
-          setAiOutput((previous) => `${previous}\n\n${t('ai.saved')}`);
+          setAiOutput((previous) => `${previous}\n\n${t('ai.savedNoSearch', { name: rule.name })}`);
           setAiBook(null);
         } catch (failure) {
           setAiError(t('ai.failed', { message: String(failure?.message ?? failure) }));
@@ -2058,9 +2111,12 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           aiError === '' ? null : h('div', { className: 'my-error' }, aiError),
           aiOutput === '' ? null : h('pre', { className: 'my-debug-output' }, aiOutput),
           aiBook === null ? null : h('div', { className: 'my-row' },
-            h('span', { className: 'my-sub' }, `${aiBook.title} · ${aiBook.url}`),
-            h('button', { className: 'my-btn primary', disabled: aiSaving, onClick: saveAiBook },
-              aiSaving ? t('ai.saving') : t('ai.saveRead')))),
+            h('span', { className: 'my-sub' }, t('ai.sample', { title: aiBook.title })),
+            form.searchUrl.trim() === ''
+              ? h('button', { className: 'my-btn primary', disabled: aiSaving, onClick: saveAiSampleBook },
+                aiSaving ? t('ai.saving') : t('ai.saveSampleRead'))
+              : h('button', { className: 'my-btn primary', disabled: aiSaving, onClick: saveAiSource },
+                aiSaving ? t('ai.saving') : t('ai.saveSearch')))),
 
         sources.length === 0 ? h('div', { className: 'my-sub' }, t('source.empty')) : sourceRows,
 
