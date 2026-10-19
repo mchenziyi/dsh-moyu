@@ -1131,7 +1131,9 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         signal,
       });
       if (!response.ok) {
-        let message = `HTTP ${response.status}`;
+        let message = response.status === 404 || response.status === 405
+          ? `AI 解析接口不可用（HTTP ${response.status}）：新的 Host 代码还没加载，请完全退出并重启 DSH 后再试`
+          : `HTTP ${response.status}`;
         try {
           const payload = await response.json();
           if (typeof payload?.message === 'string') message = payload.message;
