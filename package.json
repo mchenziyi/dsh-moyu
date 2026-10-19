@@ -1,0 +1,53 @@
+{
+  "name": "@mchenziyi/dsh-moyu",
+  "version": "0.5.0",
+  "type": "module",
+  "description": "上班摸鱼才叫赚钱：DSH 里的摸鱼套件，第一个模块是伪装成底部状态栏的小说阅读器。",
+  "author": "mchenziyi",
+  "homepage": "https://github.com/mchenziyi/dsh-moyu#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mchenziyi/dsh-moyu.git"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "moyu",
+    "novel-reader",
+    "slack"
+  ],
+  "engines": {
+    "dsh": ">=0.2.0-rc.2"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "CHANGELOG.md",
+    "examples/*.json",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  }
+}

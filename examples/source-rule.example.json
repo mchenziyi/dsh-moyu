@@ -1,0 +1,22 @@
+{
+  "id": "example",
+  "name": "示例书源",
+  "baseUrl": "https://example.com",
+  "search": {
+    "url": "https://example.com/search?q={{keyword}}",
+    "list": ".result-item",
+    "title": ".title@text",
+    "author": ".author@text",
+    "bookUrl": "a@href"
+  },
+  "toc": {
+    "list": "#list dd a",
+    "title": "@text",
+    "chapterUrl": "@href",
+    "bookTitle": "h1"
+  },
+  "content": {
+    "text": "#content",
+    "remove": ["script", ".ads"]
+  }
+}
