@@ -110,6 +110,8 @@ const searchPage = (keyword) => `<!doctype html><html><head><title>搜索 ${keyw
 </div>
 </body></html>`;
 
+const paddedSearchPage = (keyword) => searchPage(keyword).replace('</body>', `<div style="display:none">${'填充内容'.repeat(400)}</div></body>`);
+
 const AI_REPLIES = {
   homepage: { name: '测试小说网', baseUrl: 'https://site.test', searchUrl: 'https://site.test/search.php?keyword={{keyword}}', sampleBookUrl: 'https://site.test/book/1/' },
   search: { search: { url: '', list: '.result-item', title: '.title', author: '.author', bookUrl: 'a@href' } },
@@ -272,11 +274,30 @@ if (third.parsed?.book?.url !== 'https://book.test/7/') failures.push(`book-page
 if (third.parsed?.rule?.toc?.list !== '#list dd a') failures.push('book-page toc');
 if (!String(third.parsed?.log ?? '').includes('未识别到搜索入口')) failures.push('book-page note missing');
 
+// 4. homepage has no form and the model finds no search URL: the client probes
+//    conventional GET search URLs and uses the first one that returns the keyword.
+const fourth = await runInPage({
+  startUrl: 'https://probe.test/',
+  keyword: '遮天',
+  replies: AI_REPLIES,
+  homepageReply: { name: '探测书源', baseUrl: 'https://probe.test', searchUrl: '', sampleBookUrl: '' },
+  pages: {
+    'https://probe.test/': `<html><head><title>探测小说网</title></head><body><div class="hot"><a href="/book/1/">遮天</a></div></body></html>`,
+    'https://probe.test/search?q=%E9%81%AE%E5%A4%A9': paddedSearchPage('遮天'),
+    'https://probe.test/book/1/': bookPage(),
+    'https://probe.test/book/1/1.html': chapterPage(),
+  },
+});
+if (fourth.parsed?.rule?.search?.url !== 'https://probe.test/search?q={{keyword}}') failures.push(`probe search.url ${fourth.parsed?.rule?.search?.url}`);
+if (!String(fourth.parsed?.log ?? '').includes('探测到搜索地址')) failures.push('probe log missing');
+if (fourth.parsed?.book?.url !== 'https://probe.test/book/1/') failures.push(`probe book.url ${fourth.parsed?.book?.url}`);
+
 await browser.close();
 server.close();
 
 console.log('1 rule:', JSON.stringify(parsed?.rule));
 console.log('2 rule:', JSON.stringify(second.parsed?.rule));
 console.log('3 rule:', JSON.stringify(third.parsed?.rule));
+console.log('4 rule:', JSON.stringify(fourth.parsed?.rule));
 console.log(failures.length === 0 ? 'browser OK' : 'FAILED: ' + failures.join(' | '));
 process.exit(failures.length === 0 ? 0 : 1);

@@ -99,6 +99,7 @@ window.__ModuleLoader__.load({
       'source.manual': '手动新建 / 编辑书源',
       'source.manualHide': '收起手动编辑',
       'source.searchThis': '搜书',
+      'source.noSearchTag': '仅阅读（无搜索规则）',
       'source.detectSearch': '从首页识别搜索',
       'source.detected': '已识别搜索地址',
       'source.noSearchForm': '首页没有找到 GET 搜索表单，请手动填写搜索地址',
@@ -112,6 +113,7 @@ window.__ModuleLoader__.load({
       'ai.busy': '解析中…',
       'ai.stageHome': '读取首页…',
       'ai.stageAnalyzeHome': '分析首页，识别搜索入口…',
+      'ai.stageProbe': '探测搜索地址…',
       'ai.stageSearch': '分析搜索结果…',
       'ai.stageBook': '读取书籍页…',
       'ai.stageToc': '分析目录…',
@@ -129,6 +131,7 @@ window.__ModuleLoader__.load({
       'ai.savedNoSearch': '已保存书源「{name}」（这个书源没有搜索规则，只能阅读样书）。',
       'ai.savedSearchFailed': '已保存书源「{name}」，但搜索失败：{message}；可以直接在下面的搜索框重试。',
       'ai.sample': '样书：{title}（仅用于解析目录/正文，不会自动加入书架）',
+      'ai.noSearchWarning': '没有生成搜索规则：{message}。保存后这个书源只能按书籍页 URL 加入书，不能按书名搜索。',
       'ai.searchEmpty': '搜索页没有匹配到结果',
       'ai.tocEmpty': '目录页没有匹配到章节',
       'ai.contentEmpty': '正文页没有匹配到内容',
@@ -157,9 +160,19 @@ window.__ModuleLoader__.load({
       'search.searching': '搜索中…',
       'search.empty': '没有结果',
       'search.failed': '搜索失败：{message}',
+      'direct.title': '从书籍页 URL 加入',
+      'direct.hint': '站点没有搜索规则时，可以直接粘贴书籍页 URL，把这本书加入书架。',
+      'direct.url': '书籍页 URL，例如 https://site/book/123/',
+      'direct.add': '加入书架',
+      'direct.adding': '加入中…',
+      'direct.done': '已加入书架：{title}',
+      'direct.failed': '加入失败：{message}',
+      'direct.needSource': '还没有书源，先用上面的 AI 解析添加一个',
+      'direct.needUrl': '先粘贴书籍页 URL',
       'search.add': '加入书架',
       'search.adding': '加入中…',
       'search.needSource': '还没有可搜索的书源：先用上面的 AI 解析添加一个',
+      'search.noSearchable': '已有书源都没有搜索规则：可以点书源行的「编辑」补搜索地址，或直接用下面的「从书籍页 URL 加入」。',
       'reader.tocFailed': '目录读取失败：{message}',
       'reader.chapterFailed': '章节读取失败：{message}',
       'shortcut.nextPage': '下一页',
@@ -252,6 +265,7 @@ window.__ModuleLoader__.load({
       'source.manual': 'Manual source editor',
       'source.manualHide': 'Hide manual editor',
       'source.searchThis': 'Search',
+      'source.noSearchTag': 'read-only (no search rule)',
       'source.detectSearch': 'Detect search from homepage',
       'source.detected': 'Search URL detected',
       'source.noSearchForm': 'No GET search form on the homepage; fill the search URL manually',
@@ -264,6 +278,7 @@ window.__ModuleLoader__.load({
       'ai.busy': 'Parsing…',
       'ai.stageHome': 'Reading homepage…',
       'ai.stageAnalyzeHome': 'Finding the search entry…',
+      'ai.stageProbe': 'Probing a search URL…',
       'ai.stageSearch': 'Analyzing search results…',
       'ai.stageBook': 'Reading book page…',
       'ai.stageToc': 'Analyzing contents…',
@@ -281,6 +296,7 @@ window.__ModuleLoader__.load({
       'ai.savedNoSearch': 'Saved "{name}" (this source has no search rule; only the sample book can be read).',
       'ai.savedSearchFailed': 'Saved "{name}", but the search failed: {message}; retry in the search box below.',
       'ai.sample': 'Sample: {title} (used only to parse TOC/content; not added automatically)',
+      'ai.noSearchWarning': 'No search rule was generated: {message}. After saving, this source can only add books by their page URL, not by title.',
       'ai.searchEmpty': 'No results matched on the search page',
       'ai.tocEmpty': 'No chapters matched on the contents page',
       'ai.contentEmpty': 'No content matched on the chapter page',
@@ -309,9 +325,19 @@ window.__ModuleLoader__.load({
       'search.searching': 'Searching…',
       'search.empty': 'No results',
       'search.failed': 'Search failed: {message}',
+      'direct.title': 'Add by book page URL',
+      'direct.hint': 'When a site has no search rule, paste a book page URL to add that book to the shelf.',
+      'direct.url': 'Book page URL, e.g. https://site/book/123/',
+      'direct.add': 'Add to shelf',
+      'direct.adding': 'Adding…',
+      'direct.done': 'Added to shelf: {title}',
+      'direct.failed': 'Add failed: {message}',
+      'direct.needSource': 'No source yet: add one with the AI parser above',
+      'direct.needUrl': 'Paste a book page URL first',
       'search.add': 'Add to shelf',
       'search.adding': 'Adding…',
       'search.needSource': 'No searchable source yet: add one with the AI parser above',
+      'search.noSearchable': 'None of your sources has a search rule: edit a source to add one, or use “Add by book page URL” below.',
       'reader.tocFailed': 'TOC failed: {message}',
       'reader.chapterFailed': 'Chapter failed: {message}',
       'shortcut.nextPage': 'Next page',
@@ -1266,6 +1292,47 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       return next;
     }
 
+    const SEARCH_URL_PROBES = [
+      '/modules/article/search.php?searchkey={{keyword}}',
+      '/search.php?keyword={{keyword}}',
+      '/search.php?searchkey={{keyword}}',
+      '/search?keyword={{keyword}}',
+      '/search?q={{keyword}}',
+      '/s?q={{keyword}}',
+      '/?s={{keyword}}',
+      '/so.php?q={{keyword}}',
+    ];
+
+    /**
+     * Some sites render their search box from JavaScript, so neither the HTML
+     * nor the model sees the endpoint. Probe a few conventional GET search
+     * URLs in parallel and accept one whose page actually contains the keyword.
+     */
+    async function probeSearchUrl(baseUrl, homeUrl, keyword, signal) {
+      const attempts = SEARCH_URL_PROBES.map((path, index) => {
+        let template;
+        try { template = new URL(path, baseUrl).toString(); } catch { return Promise.resolve(null); }
+        return (async () => {
+          try {
+            const page = await proxyFetch(expandTemplate(template, {
+              base: baseUrl,
+              keyword: encodeURIComponent(keyword),
+            }), signal);
+            const text = String(page.text ?? '');
+            if (text.length < 2000) return null;
+            if ((page.finalUrl || '') === homeUrl) return null;
+            if (!text.includes(keyword)) return null;
+            return { template, index };
+          } catch {
+            return null;
+          }
+        })();
+      });
+      const settled = await Promise.all(attempts);
+      const best = settled.filter((entry) => entry !== null).sort((a, b) => a.index - b.index)[0];
+      return best === undefined ? '' : best.template;
+    }
+
     /**
      * Parse one site URL into a source rule: homepage → search → TOC → first
      * chapter, with the model generating selectors at each stage. The browser
@@ -1325,39 +1392,67 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 
       let searchRule = null;
       let firstResult = null;
-      if (searchUrl !== '') {
+      let searchProblem = '';
+
+      const trySearch = async (template) => {
         report('search');
-        log.push(`搜索模板：${searchUrl}`);
-        try {
-          const searchPage = await proxyFetch(expandTemplate(searchUrl, {
-            base: baseUrl,
-            keyword: encodeURIComponent(keywordText),
-          }), signal);
-          if (String(searchPage.text ?? '').trim().length < 100) {
-            throw new Error('搜索页为空（站点可能不支持 GET 搜索）');
+        log.push(`搜索模板：${template}`);
+        const searchPage = await proxyFetch(expandTemplate(template, {
+          base: baseUrl,
+          keyword: encodeURIComponent(keywordText),
+        }), signal);
+        if (String(searchPage.text ?? '').trim().length < 100) {
+          throw new Error('搜索页为空（站点可能不支持 GET 搜索）');
+        }
+        const searchDoc = parseHtml(searchPage.text);
+        const searchUrlActual = searchPage.finalUrl || template;
+        const parsed = await aiStageWithRetry('search', {
+          url: searchUrlActual,
+          keyword: keywordText,
+          html: digestHtml(searchDoc),
+          hints: buildHints('search', searchDoc),
+        }, (result) => {
+          if (probeSearchResults(result.search, searchDoc, searchUrlActual).length === 0) {
+            throw new Error('搜索结果项选择器在本页没有匹配到任何结果');
           }
-          const searchDoc = parseHtml(searchPage.text);
-          const searchUrlActual = searchPage.finalUrl || searchUrl;
-          const parsed = await aiStageWithRetry('search', {
-            url: searchUrlActual,
-            keyword: keywordText,
-            html: digestHtml(searchDoc),
-            hints: buildHints('search', searchDoc),
-          }, (result) => {
-            if (probeSearchResults(result.search, searchDoc, searchUrlActual).length === 0) {
-              throw new Error('搜索结果项选择器在本页没有匹配到任何结果');
-            }
-          }, signal, () => report('search'));
-          searchRule = parsed.result.search;
-          const results = probeSearchResults(searchRule, searchDoc, searchUrlActual);
-          firstResult = results[0] ?? null;
-          log.push(`搜索：${results.length} 条${firstResult === null ? '' : `，例：${firstResult.title}`}`);
+        }, signal, () => report('search'));
+        searchRule = parsed.result.search;
+        const results = probeSearchResults(searchRule, searchDoc, searchUrlActual);
+        firstResult = results[0] ?? null;
+        log.push(`搜索：${results.length} 条${firstResult === null ? '' : `，例：${firstResult.title}`}`);
+      };
+
+      if (searchUrl !== '') {
+        try {
+          await trySearch(searchUrl);
         } catch (failure) {
-          log.push(`搜索规则未解析：${String(failure?.message ?? failure)}`);
+          searchProblem = String(failure?.message ?? failure);
+          log.push(`搜索规则未解析：${searchProblem}`);
         }
       } else {
+        searchProblem = suppliedBookPage ? '这个地址是书籍页，没有搜索入口' : '未识别到搜索入口';
         log.push('未识别到搜索入口，将只生成目录 / 正文规则');
       }
+
+      // The model's guess (or an empty detection) may be wrong: probe conventional
+      // GET search URLs once and retry when the first attempt failed.
+      if (searchRule === null && !suppliedBookPage) {
+        report('probe');
+        const probed = await probeSearchUrl(baseUrl, homeUrl, keywordText, signal);
+        const probedUrl = probed === '' ? '' : normalizeSearchTemplate(probed, keywordText);
+        if (probedUrl !== '' && probedUrl !== searchUrl) {
+          searchUrl = probedUrl;
+          log.push(`探测到搜索地址：${searchUrl}`);
+          try {
+            await trySearch(searchUrl);
+            searchProblem = '';
+          } catch (failure) {
+            searchProblem = String(failure?.message ?? failure);
+            log.push(`搜索规则未解析：${searchProblem}`);
+          }
+        }
+      }
+
       if (searchRule !== null) {
         const template = normalizeSearchTemplate(
           searchRule.url === '' ? searchUrl : (resolveTemplate(searchRule.url, baseUrl) || searchUrl),
@@ -1415,7 +1510,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         }, signal, () => report('toc'));
       } catch (failure) {
         if (!suppliedBookPage && bookDoc === homeDoc) {
-          throw new Error('没能从当前地址识别目录：请把书籍页 URL 填到下面的「书籍页 URL」再解析一次');
+          throw new Error(`没能从当前地址识别目录：${String(failure?.message ?? failure)}。请把书籍页 URL 填到下面的「书籍页 URL」再解析一次`);
         }
         throw failure;
       }
@@ -1468,6 +1563,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           author: firstResult?.author ?? '',
         },
         model,
+        searchProblem,
         log: log.join('\n'),
       };
     }
@@ -1853,12 +1949,21 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [aiError, setAiError] = React.useState('');
       const [aiBook, setAiBook] = React.useState(null);
       const [aiSaving, setAiSaving] = React.useState(false);
+      const [aiSearchProblem, setAiSearchProblem] = React.useState('');
+      const [directSourceId, setDirectSourceId] = React.useState('');
+      const [directUrl, setDirectUrl] = React.useState('');
+      const [directBusy, setDirectBusy] = React.useState(false);
+      const [directError, setDirectError] = React.useState('');
+      const [directNotice, setDirectNotice] = React.useState('');
 
       const sources = snap.settings.sources;
       const searchable = sources.filter((source) => source.search !== null);
       const effectiveSourceId = searchable.some((source) => source.id === searchSourceId)
         ? searchSourceId
         : (searchable[0]?.id ?? '');
+      const effectiveDirectSourceId = sources.some((source) => source.id === directSourceId)
+        ? directSourceId
+        : (sources[0]?.id ?? '');
 
       function setField(key, value) {
         setForm((previous) => Object.assign({}, previous, { [key]: value }));
@@ -1878,6 +1983,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const AI_STAGE_LABELS = {
         'home': 'ai.stageHome',
         'analyze-home': 'ai.stageAnalyzeHome',
+        'probe': 'ai.stageProbe',
         'search': 'ai.stageSearch',
         'book': 'ai.stageBook',
         'toc': 'ai.stageToc',
@@ -1891,6 +1997,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setAiError('');
         setAiOutput('');
         setAiBook(null);
+        setAiSearchProblem('');
         setSearchResults(null);
         setSearchError('');
         setAiStage(t('ai.busy'));
@@ -1902,6 +2009,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           });
           setForm(parsed.form);
           setAiBook(parsed.book);
+          setAiSearchProblem(parsed.searchProblem ?? '');
           setAiOutput(parsed.log);
           setAiStage('');
           setTestError('');
@@ -2054,6 +2162,34 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setTestOutput('');
       }
 
+      async function addByDirectUrl() {
+        if (directBusy) return;
+        const source = sources.find((entry) => entry.id === effectiveDirectSourceId);
+        if (source === undefined) {
+          setDirectError(t('direct.needSource'));
+          return;
+        }
+        const target = directUrl.trim();
+        if (target === '') {
+          setDirectError(t('direct.needUrl'));
+          return;
+        }
+        setDirectBusy(true);
+        setDirectError('');
+        setDirectNotice('');
+        try {
+          const toc = await fetchToc(source, target);
+          if (toc.chapters.length === 0) throw new Error('目录为空');
+          addOnlineBookToShelf(source, { title: toc.title, author: '', bookUrl: target }, toc);
+          setDirectNotice(t('direct.done', { title: toc.title || target }));
+          setDirectUrl('');
+        } catch (failure) {
+          setDirectError(t('direct.failed', { message: String(failure?.message ?? failure) }));
+        } finally {
+          setDirectBusy(false);
+        }
+      }
+
       async function runSearch() {
         const source = sources.find((entry) => entry.id === effectiveSourceId);
         if (source === undefined) {
@@ -2091,7 +2227,9 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const sourceRows = sources.map((source) => h('div', { key: source.id, className: 'my-book' },
         h('div', { className: 'my-book-main' },
           h('div', { className: 'my-book-title' }, source.name),
-          h('div', { className: 'my-book-meta' }, source.baseUrl === '' ? source.id : source.baseUrl)),
+          h('div', { className: 'my-book-meta' },
+            (source.baseUrl === '' ? source.id : source.baseUrl)
+            + (source.search === null ? ` · ${t('source.noSearchTag')}` : ''))),
         source.search === null
           ? null
           : h('button', {
@@ -2132,6 +2270,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           aiStage === '' ? null : h('div', { className: 'my-sub' }, aiStage),
           aiError === '' ? null : h('div', { className: 'my-error' }, aiError),
           aiOutput === '' ? null : h('pre', { className: 'my-debug-output' }, aiOutput),
+          aiSearchProblem === '' ? null : h('div', { className: 'my-error' }, t('ai.noSearchWarning', { message: aiSearchProblem })),
           aiBook === null ? null : h('div', { className: 'my-row' },
             h('span', { className: 'my-sub' }, t('ai.sample', { title: aiBook.title })),
             form.searchUrl.trim() === ''
@@ -2147,7 +2286,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           h('div', { className: 'my-sub' }, t('search.hint')),
           h('div', { className: 'my-row' },
             searchable.length === 0
-              ? h('span', { className: 'my-sub' }, t('search.needSource'))
+              ? h('span', { className: 'my-sub' }, sources.length === 0 ? t('search.needSource') : t('search.noSearchable'))
               : h('select', {
                 className: 'my-select',
                 value: effectiveSourceId,
@@ -2175,7 +2314,32 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                   className: 'my-btn',
                   disabled: addingUrl === result.bookUrl,
                   onClick: () => addResult(result),
-                }, addingUrl === result.bookUrl ? t('search.adding') : t('search.add')))))),
+                }, addingUrl === result.bookUrl ? t('search.adding') : t('search.add'))))),
+
+          h('div', { className: 'my-form-label' }, t('direct.title')),
+          h('div', { className: 'my-sub' }, t('direct.hint')),
+          h('div', { className: 'my-row' },
+            sources.length === 0
+              ? h('span', { className: 'my-sub' }, t('direct.needSource'))
+              : h('select', {
+                className: 'my-select',
+                value: effectiveDirectSourceId,
+                onChange: (event) => setDirectSourceId(event.currentTarget.value),
+              }, sources.map((source) => h('option', { key: source.id, value: source.id }, source.name))),
+            h('input', {
+              className: 'my-input-path',
+              value: directUrl,
+              placeholder: t('direct.url'),
+              onChange: (event) => setDirectUrl(event.currentTarget.value),
+              onKeyDown: (event) => { if (event.key === 'Enter') addByDirectUrl(); },
+            }),
+            h('button', {
+              className: 'my-btn primary',
+              disabled: directBusy || sources.length === 0,
+              onClick: addByDirectUrl,
+            }, directBusy ? t('direct.adding') : t('direct.add'))),
+          directError === '' ? null : h('div', { className: 'my-error' }, directError),
+          directNotice === '' ? null : h('div', { className: 'my-sub' }, directNotice)),
 
         h('button', { className: 'my-btn', onClick: () => setShowManual((value) => !value) },
           showManual ? t('source.manualHide') : t('source.manual')),
