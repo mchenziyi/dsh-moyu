@@ -96,11 +96,14 @@ window.__ModuleLoader__.load({
       'source.edit': '编辑',
       'source.remove': '删除',
       'source.advanced': '高级选项（标题/链接/作者/去除节点，默认自动推导）',
+      'source.manual': '手动新建 / 编辑书源',
+      'source.manualHide': '收起手动编辑',
+      'source.searchThis': '搜书',
       'source.detectSearch': '从首页识别搜索',
       'source.detected': '已识别搜索地址',
       'source.noSearchForm': '首页没有找到 GET 搜索表单，请手动填写搜索地址',
       'source.minimal': '最少只需要：站点地址、搜索地址、搜索结果项、目录项、正文容器；标题和链接会自动推导。',
-      'source.hint': '填好下面的表单，点「测试书源」验证 搜索 → 目录 → 正文 链路，再保存；也可以先用上面的 AI 解析自动生成。选择器支持 selector@text、selector@href，以及 a || b 多候选。',
+      'source.hint': '先用上面的 AI 解析添加书源，或展开「手动新建 / 编辑书源」自己填写。添加后可在「搜书」里搜索书名并加入书架。',
       'ai.title': 'AI 解析书源',
       'ai.hint': '粘贴书源地址（首页或书籍页），用当前默认模型生成选择器规则。解析时会临时搜一本书当样本，只用来学习本站的目录/正文结构，不会加入书架；页面 HTML 会发送给模型。',
       'ai.url': '书源地址，例如 https://example.com',
@@ -147,6 +150,8 @@ window.__ModuleLoader__.load({
       'settings.sourceEmpty': '还没有书源。',
       'settings.sourceInvalid': '书源规则无效：{message}',
       'settings.sourceRemove': '删除',
+      'search.title': '搜书',
+      'search.hint': '选一个书源，输入书名或作者，搜索后点「加入书架」；加入后回到书架即可阅读。',
       'search.keyword': '搜索关键词',
       'search.button': '搜索',
       'search.searching': '搜索中…',
@@ -154,7 +159,7 @@ window.__ModuleLoader__.load({
       'search.failed': '搜索失败：{message}',
       'search.add': '加入书架',
       'search.adding': '加入中…',
-      'search.needSource': '先添加一个带搜索规则的书源',
+      'search.needSource': '还没有可搜索的书源：先用上面的 AI 解析添加一个',
       'reader.tocFailed': '目录读取失败：{message}',
       'reader.chapterFailed': '章节读取失败：{message}',
       'shortcut.nextPage': '下一页',
@@ -242,8 +247,11 @@ window.__ModuleLoader__.load({
       'source.invalid': 'Invalid source config: {message}',
       'source.edit': 'Edit',
       'source.remove': 'Remove',
-      'source.hint': 'Fill the form, run Test source to verify search → TOC → content, then save. Selectors accept selector@text, selector@href, and a || b fallbacks.',
+      'source.hint': 'Add a source with the AI parser above, or expand “Manual source editor” to fill it in yourself. Once added, search books under “Search books”.',
       'source.advanced': 'Advanced (title/link/author/remove nodes; derived by default)',
+      'source.manual': 'Manual source editor',
+      'source.manualHide': 'Hide manual editor',
+      'source.searchThis': 'Search',
       'source.detectSearch': 'Detect search from homepage',
       'source.detected': 'Search URL detected',
       'source.noSearchForm': 'No GET search form on the homepage; fill the search URL manually',
@@ -294,6 +302,8 @@ window.__ModuleLoader__.load({
       'settings.sourceEmpty': 'No sources yet.',
       'settings.sourceInvalid': 'Invalid source rule: {message}',
       'settings.sourceRemove': 'Remove',
+      'search.title': 'Search books',
+      'search.hint': 'Pick a source, type a title or author, then add a result to the shelf to start reading.',
       'search.keyword': 'Search keyword',
       'search.button': 'Search',
       'search.searching': 'Searching…',
@@ -301,7 +311,7 @@ window.__ModuleLoader__.load({
       'search.failed': 'Search failed: {message}',
       'search.add': 'Add to shelf',
       'search.adding': 'Adding…',
-      'search.needSource': 'Add a source with a search rule first',
+      'search.needSource': 'No searchable source yet: add one with the AI parser above',
       'reader.tocFailed': 'TOC failed: {message}',
       'reader.chapterFailed': 'Chapter failed: {message}',
       'shortcut.nextPage': 'Next page',
@@ -1834,6 +1844,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [searchResults, setSearchResults] = React.useState(null);
       const [addingUrl, setAddingUrl] = React.useState('');
       const [showAdvanced, setShowAdvanced] = React.useState(false);
+      const [showManual, setShowManual] = React.useState(false);
       const [aiUrl, setAiUrl] = React.useState('');
       const [aiKeyword, setAiKeyword] = React.useState('');
       const [aiBusy, setAiBusy] = React.useState(false);
@@ -2024,6 +2035,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           const current = store.get().settings.sources;
           setSettings({ sources: [rule, ...current.filter((source) => source.id !== rule.id)] });
           setForm(emptySourceForm());
+          setShowManual(false);
           setTestOutput(t('source.saved', { name: rule.name }));
           setTestError('');
         } catch (failure) {
@@ -2033,6 +2045,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 
       function editSource(source) {
         setForm(formFromRule(source));
+        setShowManual(true);
         setAiUrl(source.baseUrl);
         setAiError('');
         setAiOutput('');
@@ -2079,6 +2092,15 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         h('div', { className: 'my-book-main' },
           h('div', { className: 'my-book-title' }, source.name),
           h('div', { className: 'my-book-meta' }, source.baseUrl === '' ? source.id : source.baseUrl)),
+        source.search === null
+          ? null
+          : h('button', {
+            className: 'my-btn',
+            onClick: () => {
+              setSearchSourceId(source.id);
+              setSearchError('');
+            },
+          }, t('source.searchThis')),
         h('button', { className: 'my-btn', onClick: () => editSource(source) }, t('source.edit')),
         h('button', { className: 'my-btn', onClick: () => setSettings({ sources: sources.filter((entry) => entry.id !== source.id) }) }, t('source.remove'))));
 
@@ -2121,68 +2143,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         sources.length === 0 ? h('div', { className: 'my-sub' }, t('source.empty')) : sourceRows,
 
         h('div', { className: 'my-form-section' },
-          h('h4', null, form.id === '' ? t('source.new') : t('source.editTitle')),
-          h('div', { className: 'my-sub' }, t('source.minimal')),
-          h('div', { className: 'my-form-grid' },
-            field('name', t('source.name')),
-            field('baseUrl', t('source.baseUrl'))),
-          h('div', { className: 'my-row' },
-            h('div', { className: 'my-field', style: { flex: '1', minWidth: '220px' } },
-              h('span', { className: 'my-field-label' }, t('source.searchUrl')),
-              h('input', {
-                className: 'my-field-input',
-                value: form.searchUrl,
-                placeholder: 'https://site/search?q={{keyword}}',
-                onChange: (event) => setField('searchUrl', event.currentTarget.value),
-              })),
-            h('button', { className: 'my-btn', onClick: detectSearchUrl }, t('source.detectSearch'))),
-          h('div', { className: 'my-form-grid' },
-            field('searchList', t('source.searchList')),
-            field('tocList', t('source.tocList')),
-            field('contentText', t('source.contentText'))),
-          h('button', {
-            className: 'my-btn',
-            onClick: () => setShowAdvanced((value) => !value),
-          }, t('source.advanced')),
-          showAdvanced
-            ? h('div', { className: 'my-form-section' },
-              h('div', { className: 'my-form-label' }, '搜索'),
-              h('div', { className: 'my-form-grid' },
-                field('searchTitle', t('source.searchTitle')),
-                field('searchAuthor', t('source.searchAuthor')),
-                field('searchBookUrl', t('source.searchBookUrl'))),
-              h('div', { className: 'my-form-label' }, '目录'),
-              h('div', { className: 'my-form-grid' },
-                field('tocTitle', t('source.tocTitle')),
-                field('tocChapterUrl', t('source.tocChapterUrl')),
-                field('tocBookTitle', t('source.tocBookTitle'))),
-              h('div', { className: 'my-form-label' }, '正文'),
-              h('div', { className: 'my-form-grid' },
-                field('contentRemove', t('source.contentRemove'))))
-            : null),
-
-        h('div', { className: 'my-row' },
-          h('input', {
-            className: 'my-input-path',
-            value: testKeyword,
-            placeholder: t('source.testKeyword'),
-            onChange: (event) => setTestKeyword(event.currentTarget.value),
-          }),
-          h('button', { className: 'my-btn primary', disabled: testBusy, onClick: testCurrent },
-            testBusy ? t('source.testing') : t('source.test'))),
-        h('div', { className: 'my-row' },
-          h('input', {
-            className: 'my-input-path',
-            value: testBookUrl,
-            placeholder: t('source.testBookUrl'),
-            onChange: (event) => setTestBookUrl(event.currentTarget.value),
-          }),
-          h('button', { className: 'my-btn', onClick: saveCurrent }, t('source.save')),
-          h('button', { className: 'my-btn', onClick: () => { setForm(emptySourceForm()); setTestOutput(''); setTestError(''); } }, t('source.clear'))),
-        testError === '' ? null : h('div', { className: 'my-error' }, testError),
-        testOutput === '' ? null : h('pre', { className: 'my-debug-output' }, testOutput),
-
-        h('div', { className: 'my-form-section' },
+          h('h4', null, t('search.title')),
+          h('div', { className: 'my-sub' }, t('search.hint')),
           h('div', { className: 'my-row' },
             searchable.length === 0
               ? h('span', { className: 'my-sub' }, t('search.needSource'))
@@ -2198,7 +2160,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
               onChange: (event) => setSearchKeyword(event.currentTarget.value),
               onKeyDown: (event) => { if (event.key === 'Enter') runSearch(); },
             }),
-            h('button', { className: 'my-btn', disabled: searchBusy || searchable.length === 0, onClick: runSearch },
+            h('button', { className: 'my-btn primary', disabled: searchBusy || searchable.length === 0, onClick: runSearch },
               searchBusy ? t('search.searching') : t('search.button'))),
           searchError === '' ? null : h('div', { className: 'my-error' }, searchError),
           searchResults === null
@@ -2213,7 +2175,75 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                   className: 'my-btn',
                   disabled: addingUrl === result.bookUrl,
                   onClick: () => addResult(result),
-                }, addingUrl === result.bookUrl ? t('search.adding') : t('search.add')))))));
+                }, addingUrl === result.bookUrl ? t('search.adding') : t('search.add')))))),
+
+        h('button', { className: 'my-btn', onClick: () => setShowManual((value) => !value) },
+          showManual ? t('source.manualHide') : t('source.manual')),
+
+        showManual
+          ? h('div', { className: 'my-form-section' },
+            h('h4', null, form.id === '' ? t('source.new') : t('source.editTitle')),
+            h('div', { className: 'my-sub' }, t('source.minimal')),
+            h('div', { className: 'my-form-grid' },
+              field('name', t('source.name')),
+              field('baseUrl', t('source.baseUrl'))),
+            h('div', { className: 'my-row' },
+              h('div', { className: 'my-field', style: { flex: '1', minWidth: '220px' } },
+                h('span', { className: 'my-field-label' }, t('source.searchUrl')),
+                h('input', {
+                  className: 'my-field-input',
+                  value: form.searchUrl,
+                  placeholder: 'https://site/search?q={{keyword}}',
+                  onChange: (event) => setField('searchUrl', event.currentTarget.value),
+                })),
+              h('button', { className: 'my-btn', onClick: detectSearchUrl }, t('source.detectSearch'))),
+            h('div', { className: 'my-form-grid' },
+              field('searchList', t('source.searchList')),
+              field('tocList', t('source.tocList')),
+              field('contentText', t('source.contentText'))),
+            h('button', {
+              className: 'my-btn',
+              onClick: () => setShowAdvanced((value) => !value),
+            }, t('source.advanced')),
+            showAdvanced
+              ? h('div', { className: 'my-form-section' },
+                h('div', { className: 'my-form-label' }, '搜索'),
+                h('div', { className: 'my-form-grid' },
+                  field('searchTitle', t('source.searchTitle')),
+                  field('searchAuthor', t('source.searchAuthor')),
+                  field('searchBookUrl', t('source.searchBookUrl'))),
+                h('div', { className: 'my-form-label' }, '目录'),
+                h('div', { className: 'my-form-grid' },
+                  field('tocTitle', t('source.tocTitle')),
+                  field('tocChapterUrl', t('source.tocChapterUrl')),
+                  field('tocBookTitle', t('source.tocBookTitle'))),
+                h('div', { className: 'my-form-label' }, '正文'),
+                h('div', { className: 'my-form-grid' },
+                  field('contentRemove', t('source.contentRemove'))))
+              : null,
+
+            h('div', { className: 'my-row' },
+              h('input', {
+                className: 'my-input-path',
+                value: testKeyword,
+                placeholder: t('source.testKeyword'),
+                onChange: (event) => setTestKeyword(event.currentTarget.value),
+              }),
+              h('button', { className: 'my-btn primary', disabled: testBusy, onClick: testCurrent },
+                testBusy ? t('source.testing') : t('source.test'))),
+            h('div', { className: 'my-row' },
+              h('input', {
+                className: 'my-input-path',
+                value: testBookUrl,
+                placeholder: t('source.testBookUrl'),
+                onChange: (event) => setTestBookUrl(event.currentTarget.value),
+              }),
+              h('button', { className: 'my-btn', onClick: saveCurrent }, t('source.save')),
+              h('button', { className: 'my-btn', onClick: () => { setForm(emptySourceForm()); setTestOutput(''); setTestError(''); } }, t('source.clear'))),
+            testError === '' ? null : h('div', { className: 'my-error' }, testError),
+            testOutput === '' ? null : h('pre', { className: 'my-debug-output' }, testOutput))
+          : null);
+
     }
 
     function SwitchSourcePanel({ book, snap, t, onClose }) {
