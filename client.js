@@ -136,6 +136,19 @@ window.__ModuleLoader__.load({
       'ai.tocEmpty': '目录页没有匹配到章节',
       'ai.contentEmpty': '正文页没有匹配到内容',
       'ai.model': '模型：{model}',
+      'ai.savedSearchGo': '已保存书源「{name}」，正在「找书」里按「{keyword}」搜索…',
+      'settings.tabs.prefs': '设置',
+      'settings.tabs.sources': '书源',
+      'find.title': '找书',
+      'find.hint': '选一个书源，输入书名或作者，搜索后点「加入书架」；加入后回到书架即可阅读。',
+      'find.noSources': '还没有书源。',
+      'find.goSources': '去添加书源',
+      'find.noSearchable': '现有书源都没有搜索规则：去「书源」里编辑补一个，或用下面的书籍页 URL 直接加入。',
+      'shelf.emptyHint': '书架是空的：导入本地 TXT，或先添加在线书源再找书。',
+      'shelf.goSources': '去添加书源',
+      'shelf.goFind': '去找书',
+      'search.tocProgress': '正在读取目录：第 {page} 页，已找到 {chapters} 章…',
+      'search.tocLoading': '正在读取目录…',
       'switch.title': '换源',
       'switch.source': '目标书源',
       'switch.keyword': '书名或作者',
@@ -301,6 +314,19 @@ window.__ModuleLoader__.load({
       'ai.tocEmpty': 'No chapters matched on the contents page',
       'ai.contentEmpty': 'No content matched on the chapter page',
       'ai.model': 'Model: {model}',
+      'ai.savedSearchGo': 'Saved "{name}"; searching "{keyword}" under “Find books”…',
+      'settings.tabs.prefs': 'Settings',
+      'settings.tabs.sources': 'Sources',
+      'find.title': 'Find books',
+      'find.hint': 'Pick a source, type a title or author, then add a result to the shelf.',
+      'find.noSources': 'No sources yet.',
+      'find.goSources': 'Add a source',
+      'find.noSearchable': 'None of your sources has a search rule: edit one under “Sources”, or add a book by its page URL below.',
+      'shelf.emptyHint': 'The shelf is empty: import a local TXT, or add an online source and find a book.',
+      'shelf.goSources': 'Add a source',
+      'shelf.goFind': 'Find books',
+      'search.tocProgress': 'Reading contents: page {page}, {chapters} chapters so far…',
+      'search.tocLoading': 'Reading contents…',
       'switch.title': 'Switch source',
       'switch.source': 'Target source',
       'switch.keyword': 'Title or author',
@@ -374,6 +400,11 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 .my-input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--dsw-alias-label-primary);font:inherit}
 .my-settings{display:flex;flex-direction:column;gap:18px;padding:4px 0 24px;color:var(--dsw-alias-label-primary);font-size:13px}
 .my-settings h2{margin:0;font-size:15px}
+.my-tabs{display:flex;gap:2px;border-bottom:1px solid var(--dsw-alias-border-l1);margin:2px 0}
+.my-tab{height:34px;padding:0 14px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;cursor:pointer}
+.my-tab:hover{color:var(--dsw-alias-label-primary)}
+.my-tab.active{color:var(--dsw-alias-label-primary);border-bottom-color:var(--dsw-alias-brand-primary)}
+.my-select{height:32px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:12.5px}
 .my-settings h3{margin:0 0 8px;font-size:13px;color:var(--dsw-alias-label-primary)}
 .my-sub{color:var(--dsw-alias-label-secondary);font-size:12px;margin-top:2px}
 .my-card{border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
@@ -800,15 +831,37 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       return candidates.length === 0 ? '' : candidates[0].href;
     }
 
-    async function fetchToc(source, bookUrl, signal) {
+    async function fetchToc(source, bookUrl, signal, onProgress) {
       const chapters = [];
       const seenChapters = new Set();
       const visitedPages = new Set();
       let title = '';
       let pageUrl = bookUrl;
-      for (let page = 0; page < 50; page += 1) {
+      let complete = true;
+      const deadline = Date.now() + 30_000;
+      for (let page = 0; page < 30; page += 1) {
+        if (Date.now() > deadline) {
+          complete = false;
+          break;
+        }
         visitedPages.add(pageUrl);
-        const response = await proxyFetch(pageUrl, signal);
+        let response;
+        let failed = false;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            response = await proxyFetch(pageUrl, signal);
+            break;
+          } catch (failure) {
+            if (attempt === 1) {
+              if (chapters.length === 0) throw failure;
+              failed = true;
+            }
+          }
+        }
+        if (failed) {
+          complete = false;
+          break;
+        }
         const doc = parseHtml(response.text);
         const parsed = probeToc(source.toc, doc, response.finalUrl);
         if (title === '') title = parsed.title;
@@ -817,11 +870,14 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           seenChapters.add(chapter.url);
           chapters.push(chapter);
         }
+        if (typeof onProgress === 'function') {
+          try { onProgress({ page: page + 1, chapters: chapters.length }); } catch { /* progress is best effort */ }
+        }
         const nextPage = findNextTocPage(doc, response.finalUrl, bookUrl, visitedPages);
         if (nextPage === '') break;
         pageUrl = nextPage;
       }
-      return { title, chapters };
+      return { title, chapters, complete };
     }
 
     function detectChapterPageCount(doc) {
@@ -2051,19 +2107,13 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
     // settings section
     // ------------------------------------------------------------------
 
-    function OnlineSourcesCard({ snap, t }) {
+    function SourcesCard({ snap, t, onSearch }) {
       const [form, setForm] = React.useState(emptySourceForm);
       const [testKeyword, setTestKeyword] = React.useState('');
       const [testBookUrl, setTestBookUrl] = React.useState('');
       const [testBusy, setTestBusy] = React.useState(false);
       const [testOutput, setTestOutput] = React.useState('');
       const [testError, setTestError] = React.useState('');
-      const [searchKeyword, setSearchKeyword] = React.useState('');
-      const [searchSourceId, setSearchSourceId] = React.useState('');
-      const [searchBusy, setSearchBusy] = React.useState(false);
-      const [searchError, setSearchError] = React.useState('');
-      const [searchResults, setSearchResults] = React.useState(null);
-      const [addingUrl, setAddingUrl] = React.useState('');
       const [showAdvanced, setShowAdvanced] = React.useState(false);
       const [showManual, setShowManual] = React.useState(false);
       const [aiUrl, setAiUrl] = React.useState('');
@@ -2075,20 +2125,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [aiBook, setAiBook] = React.useState(null);
       const [aiSaving, setAiSaving] = React.useState(false);
       const [aiSearchProblem, setAiSearchProblem] = React.useState('');
-      const [directSourceId, setDirectSourceId] = React.useState('');
-      const [directUrl, setDirectUrl] = React.useState('');
-      const [directBusy, setDirectBusy] = React.useState(false);
-      const [directError, setDirectError] = React.useState('');
-      const [directNotice, setDirectNotice] = React.useState('');
-
       const sources = snap.settings.sources;
-      const searchable = sources.filter((source) => source.search !== null);
-      const effectiveSourceId = searchable.some((source) => source.id === searchSourceId)
-        ? searchSourceId
-        : (searchable[0]?.id ?? '');
-      const effectiveDirectSourceId = sources.some((source) => source.id === directSourceId)
-        ? directSourceId
-        : (sources[0]?.id ?? '');
 
       function setField(key, value) {
         setForm((previous) => Object.assign({}, previous, { [key]: value }));
@@ -2123,8 +2160,6 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setAiOutput('');
         setAiBook(null);
         setAiSearchProblem('');
-        setSearchResults(null);
-        setSearchError('');
         setAiStage(t('ai.busy'));
         try {
           const entry = (aiUrl.trim() !== '' ? aiUrl : form.baseUrl).trim();
@@ -2152,8 +2187,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setSettings({ sources: [rule, ...current.filter((source) => source.id !== rule.id)] });
       }
 
-      /** Save the source, then search the sample keyword so the user can pick a book. */
-      async function saveAiSource() {
+      function saveAiSource() {
         if (aiBook === null || aiSaving) return;
         setAiSaving(true);
         setAiError('');
@@ -2165,23 +2199,9 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
             return;
           }
           const keyword = aiKeyword.trim() || aiBook.title || '小说';
-          setSearchSourceId(rule.id);
-          setSearchKeyword(keyword);
-          setSearchResults(null);
-          setSearchError('');
-          setSearchBusy(true);
-          try {
-            const results = await searchSource(rule, keyword);
-            setSearchResults(results);
-            setAiOutput((previous) => `${previous}\n\n${t('ai.savedSearch', { name: rule.name, keyword, count: results.length })}`);
-          } catch (failure) {
-            const message = String(failure?.message ?? failure);
-            setSearchError(t('search.failed', { message }));
-            setAiOutput((previous) => `${previous}\n\n${t('ai.savedSearchFailed', { name: rule.name, message })}`);
-          } finally {
-            setSearchBusy(false);
-          }
+          setAiOutput((previous) => `${previous}\n\n${t('ai.savedSearchGo', { name: rule.name, keyword })}`);
           setAiBook(null);
+          onSearch(rule.id, keyword);
         } catch (failure) {
           setAiError(t('ai.failed', { message: String(failure?.message ?? failure) }));
         } finally {
@@ -2265,8 +2285,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       function saveCurrent() {
         try {
           const rule = ruleFromForm(form);
-          const current = store.get().settings.sources;
-          setSettings({ sources: [rule, ...current.filter((source) => source.id !== rule.id)] });
+          saveFormSource(rule);
           setForm(emptySourceForm());
           setShowManual(false);
           setTestOutput(t('source.saved', { name: rule.name }));
@@ -2287,68 +2306,6 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setTestOutput('');
       }
 
-      async function addByDirectUrl() {
-        if (directBusy) return;
-        const source = sources.find((entry) => entry.id === effectiveDirectSourceId);
-        if (source === undefined) {
-          setDirectError(t('direct.needSource'));
-          return;
-        }
-        const target = directUrl.trim();
-        if (target === '') {
-          setDirectError(t('direct.needUrl'));
-          return;
-        }
-        setDirectBusy(true);
-        setDirectError('');
-        setDirectNotice('');
-        try {
-          const toc = await fetchToc(source, target);
-          if (toc.chapters.length === 0) throw new Error('目录为空');
-          addOnlineBookToShelf(source, { title: toc.title, author: '', bookUrl: target }, toc);
-          setDirectNotice(t('direct.done', { title: toc.title || target }));
-          setDirectUrl('');
-        } catch (failure) {
-          setDirectError(t('direct.failed', { message: String(failure?.message ?? failure) }));
-        } finally {
-          setDirectBusy(false);
-        }
-      }
-
-      async function runSearch() {
-        const source = sources.find((entry) => entry.id === effectiveSourceId);
-        if (source === undefined) {
-          setSearchError(t('search.needSource'));
-          return;
-        }
-        setSearchBusy(true);
-        setSearchError('');
-        setSearchResults(null);
-        try {
-          setSearchResults(await searchSource(source, searchKeyword));
-        } catch (failure) {
-          setSearchError(t('search.failed', { message: String(failure?.message ?? failure) }));
-        } finally {
-          setSearchBusy(false);
-        }
-      }
-
-      async function addResult(result) {
-        const source = sources.find((entry) => entry.id === effectiveSourceId);
-        if (source === undefined) return;
-        setAddingUrl(result.bookUrl);
-        setSearchError('');
-        try {
-          const toc = await fetchToc(source, result.bookUrl);
-          if (toc.chapters.length === 0) throw new Error('目录为空');
-          addOnlineBookToShelf(source, result, toc);
-        } catch (failure) {
-          setSearchError(t('reader.tocFailed', { message: String(failure?.message ?? failure) }));
-        } finally {
-          setAddingUrl('');
-        }
-      }
-
       const sourceRows = sources.map((source) => h('div', { key: source.id, className: 'my-book' },
         h('div', { className: 'my-book-main' },
           h('div', { className: 'my-book-title' }, source.name),
@@ -2357,13 +2314,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
             + (source.search === null ? ` · ${t('source.noSearchTag')}` : ''))),
         source.search === null
           ? null
-          : h('button', {
-            className: 'my-btn',
-            onClick: () => {
-              setSearchSourceId(source.id);
-              setSearchError('');
-            },
-          }, t('source.searchThis')),
+          : h('button', { className: 'my-btn', onClick: () => onSearch(source.id, '') }, t('source.searchThis')),
         h('button', { className: 'my-btn', onClick: () => editSource(source) }, t('source.edit')),
         h('button', { className: 'my-btn', onClick: () => setSettings({ sources: sources.filter((entry) => entry.id !== source.id) }) }, t('source.remove'))));
 
@@ -2405,66 +2356,6 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                 aiSaving ? t('ai.saving') : t('ai.saveSearch')))),
 
         sources.length === 0 ? h('div', { className: 'my-sub' }, t('source.empty')) : sourceRows,
-
-        h('div', { className: 'my-form-section' },
-          h('h4', null, t('search.title')),
-          h('div', { className: 'my-sub' }, t('search.hint')),
-          h('div', { className: 'my-row' },
-            searchable.length === 0
-              ? h('span', { className: 'my-sub' }, sources.length === 0 ? t('search.needSource') : t('search.noSearchable'))
-              : h('select', {
-                className: 'my-select',
-                value: effectiveSourceId,
-                onChange: (event) => setSearchSourceId(event.currentTarget.value),
-              }, searchable.map((source) => h('option', { key: source.id, value: source.id }, source.name))),
-            h('input', {
-              className: 'my-input-path',
-              value: searchKeyword,
-              placeholder: t('search.keyword'),
-              onChange: (event) => setSearchKeyword(event.currentTarget.value),
-              onKeyDown: (event) => { if (event.key === 'Enter') runSearch(); },
-            }),
-            h('button', { className: 'my-btn primary', disabled: searchBusy || searchable.length === 0, onClick: runSearch },
-              searchBusy ? t('search.searching') : t('search.button'))),
-          searchError === '' ? null : h('div', { className: 'my-error' }, searchError),
-          searchResults === null
-            ? null
-            : (searchResults.length === 0
-              ? h('div', { className: 'my-sub' }, t('search.empty'))
-              : searchResults.map((result) => h('div', { key: result.bookUrl, className: 'my-book' },
-                h('div', { className: 'my-book-main' },
-                  h('div', { className: 'my-book-title' }, result.title || result.bookUrl),
-                  result.author === '' ? null : h('div', { className: 'my-book-meta' }, result.author)),
-                h('button', {
-                  className: 'my-btn',
-                  disabled: addingUrl === result.bookUrl,
-                  onClick: () => addResult(result),
-                }, addingUrl === result.bookUrl ? t('search.adding') : t('search.add'))))),
-
-          h('div', { className: 'my-form-label' }, t('direct.title')),
-          h('div', { className: 'my-sub' }, t('direct.hint')),
-          h('div', { className: 'my-row' },
-            sources.length === 0
-              ? h('span', { className: 'my-sub' }, t('direct.needSource'))
-              : h('select', {
-                className: 'my-select',
-                value: effectiveDirectSourceId,
-                onChange: (event) => setDirectSourceId(event.currentTarget.value),
-              }, sources.map((source) => h('option', { key: source.id, value: source.id }, source.name))),
-            h('input', {
-              className: 'my-input-path',
-              value: directUrl,
-              placeholder: t('direct.url'),
-              onChange: (event) => setDirectUrl(event.currentTarget.value),
-              onKeyDown: (event) => { if (event.key === 'Enter') addByDirectUrl(); },
-            }),
-            h('button', {
-              className: 'my-btn primary',
-              disabled: directBusy || sources.length === 0,
-              onClick: addByDirectUrl,
-            }, directBusy ? t('direct.adding') : t('direct.add'))),
-          directError === '' ? null : h('div', { className: 'my-error' }, directError),
-          directNotice === '' ? null : h('div', { className: 'my-sub' }, directNotice)),
 
         h('button', { className: 'my-btn', onClick: () => setShowManual((value) => !value) },
           showManual ? t('source.manualHide') : t('source.manual')),
@@ -2532,7 +2423,283 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
             testError === '' ? null : h('div', { className: 'my-error' }, testError),
             testOutput === '' ? null : h('pre', { className: 'my-debug-output' }, testOutput))
           : null);
+    }
 
+    function FindBooksCard({ snap, t, request, onConsumed, onGoSources }) {
+      const sources = snap.settings.sources;
+      const searchable = sources.filter((source) => source.search !== null);
+      const [sourceId, setSourceId] = React.useState('');
+      const [keyword, setKeyword] = React.useState('');
+      const [busy, setBusy] = React.useState(false);
+      const [error, setError] = React.useState('');
+      const [results, setResults] = React.useState(null);
+      const [addingUrl, setAddingUrl] = React.useState('');
+      const [addProgress, setAddProgress] = React.useState('');
+      const [directSourceId, setDirectSourceId] = React.useState('');
+      const [directUrl, setDirectUrl] = React.useState('');
+      const [directBusy, setDirectBusy] = React.useState(false);
+      const [directError, setDirectError] = React.useState('');
+      const [directNotice, setDirectNotice] = React.useState('');
+      const [directProgress, setDirectProgress] = React.useState('');
+      const handledRequest = React.useRef(0);
+
+      const effectiveSourceId = searchable.some((source) => source.id === sourceId)
+        ? sourceId
+        : (searchable[0]?.id ?? '');
+      const effectiveDirectSourceId = sources.some((source) => source.id === directSourceId)
+        ? directSourceId
+        : (sources[0]?.id ?? '');
+
+      React.useEffect(() => {
+        if (request === null || request === undefined) return;
+        if (handledRequest.current === request.nonce) return;
+        handledRequest.current = request.nonce;
+        const source = sources.find((entry) => entry.id === request.sourceId)
+          ?? sources.find((entry) => entry.search !== null);
+        setSourceId(request.sourceId ?? '');
+        setKeyword(request.keyword ?? '');
+        if (source !== undefined && typeof request.keyword === 'string' && request.keyword !== '') {
+          setBusy(true);
+          setError('');
+          setResults(null);
+          searchSource(source, request.keyword ?? '')
+            .then((found) => setResults(found))
+            .catch((failure) => setError(t('search.failed', { message: String(failure?.message ?? failure) })))
+            .finally(() => setBusy(false));
+        }
+        if (typeof onConsumed === 'function') onConsumed();
+      }, [request]);
+
+      async function runSearch() {
+        const source = sources.find((entry) => entry.id === effectiveSourceId);
+        if (source === undefined) {
+          setError(t('search.needSource'));
+          return;
+        }
+        setBusy(true);
+        setError('');
+        setResults(null);
+        try {
+          setResults(await searchSource(source, keyword));
+        } catch (failure) {
+          setError(t('search.failed', { message: String(failure?.message ?? failure) }));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function addResult(result) {
+        const source = sources.find((entry) => entry.id === effectiveSourceId);
+        if (source === undefined) return;
+        setAddingUrl(result.bookUrl);
+        setError('');
+        setAddProgress(t('search.tocLoading'));
+        try {
+          const toc = await fetchToc(source, result.bookUrl, undefined, (progress) => {
+            setAddProgress(t('search.tocProgress', { page: progress.page, chapters: progress.chapters }));
+          });
+          if (toc.chapters.length === 0) throw new Error('目录为空');
+          addOnlineBookToShelf(source, result, toc);
+        } catch (failure) {
+          setError(t('reader.tocFailed', { message: String(failure?.message ?? failure) }));
+        } finally {
+          setAddingUrl('');
+          setAddProgress('');
+        }
+      }
+
+      async function addByDirectUrl() {
+        if (directBusy) return;
+        const source = sources.find((entry) => entry.id === effectiveDirectSourceId);
+        if (source === undefined) {
+          setDirectError(t('direct.needSource'));
+          return;
+        }
+        const target = directUrl.trim();
+        if (target === '') {
+          setDirectError(t('direct.needUrl'));
+          return;
+        }
+        setDirectBusy(true);
+        setDirectError('');
+        setDirectNotice('');
+        setDirectProgress(t('search.tocLoading'));
+        try {
+          const toc = await fetchToc(source, target, undefined, (progress) => {
+            setDirectProgress(t('search.tocProgress', { page: progress.page, chapters: progress.chapters }));
+          });
+          if (toc.chapters.length === 0) throw new Error('目录为空');
+          addOnlineBookToShelf(source, { title: toc.title, author: '', bookUrl: target }, toc);
+          setDirectNotice(t('direct.done', { title: toc.title || target }));
+          setDirectUrl('');
+        } catch (failure) {
+          setDirectError(t('direct.failed', { message: String(failure?.message ?? failure) }));
+        } finally {
+          setDirectBusy(false);
+          setDirectProgress('');
+        }
+      }
+
+      const resultRows = results === null
+        ? null
+        : (results.length === 0
+          ? h('div', { className: 'my-sub' }, t('search.empty'))
+          : results.map((result) => h('div', { key: result.bookUrl, className: 'my-book' },
+            h('div', { className: 'my-book-main' },
+              h('div', { className: 'my-book-title' }, result.title || result.bookUrl),
+              result.author === '' ? null : h('div', { className: 'my-book-meta' }, result.author)),
+            h('button', {
+              className: 'my-btn',
+              disabled: addingUrl === result.bookUrl,
+              onClick: () => addResult(result),
+            }, addingUrl === result.bookUrl ? (addProgress || t('search.adding')) : t('search.add')))));
+
+      const searchBlock = searchable.length === 0
+        ? h('div', null,
+          h('div', { className: 'my-sub' }, t('find.noSearchable')),
+          h('button', { className: 'my-btn', onClick: onGoSources }, t('find.goSources')))
+        : h(React.Fragment, null,
+          h('div', { className: 'my-row' },
+            h('select', {
+              className: 'my-select',
+              value: effectiveSourceId,
+              onChange: (event) => setSourceId(event.currentTarget.value),
+            }, searchable.map((source) => h('option', { key: source.id, value: source.id }, source.name))),
+            h('input', {
+              className: 'my-input-path',
+              value: keyword,
+              placeholder: t('search.keyword'),
+              onChange: (event) => setKeyword(event.currentTarget.value),
+              onKeyDown: (event) => { if (event.key === 'Enter') runSearch(); },
+            }),
+            h('button', { className: 'my-btn primary', disabled: busy, onClick: runSearch },
+              busy ? t('search.searching') : t('search.button'))),
+          error === '' ? null : h('div', { className: 'my-error' }, error),
+          addProgress === '' ? null : h('div', { className: 'my-sub' }, addProgress),
+          resultRows);
+
+      return h('div', { className: 'my-card' },
+        h('h3', null, t('find.title')),
+        h('div', { className: 'my-sub' }, t('find.hint')),
+        sources.length === 0
+          ? h('div', null,
+            h('div', { className: 'my-sub' }, t('find.noSources')),
+            h('button', { className: 'my-btn primary', onClick: onGoSources }, t('find.goSources')))
+          : h(React.Fragment, null,
+            searchBlock,
+            h('div', { className: 'my-form-section' },
+              h('div', { className: 'my-form-label' }, t('direct.title')),
+              h('div', { className: 'my-sub' }, t('direct.hint')),
+              h('div', { className: 'my-row' },
+                h('select', {
+                  className: 'my-select',
+                  value: effectiveDirectSourceId,
+                  onChange: (event) => setDirectSourceId(event.currentTarget.value),
+                }, sources.map((source) => h('option', { key: source.id, value: source.id }, source.name))),
+                h('input', {
+                  className: 'my-input-path',
+                  value: directUrl,
+                  placeholder: t('direct.url'),
+                  onChange: (event) => setDirectUrl(event.currentTarget.value),
+                  onKeyDown: (event) => { if (event.key === 'Enter') addByDirectUrl(); },
+                }),
+                h('button', {
+                  className: 'my-btn primary',
+                  disabled: directBusy,
+                  onClick: addByDirectUrl,
+                }, directBusy ? (directProgress || t('direct.adding')) : t('direct.add'))),
+              directError === '' ? null : h('div', { className: 'my-error' }, directError),
+              directNotice === '' ? null : h('div', { className: 'my-sub' }, directNotice))));
+    }
+
+    function ShelfCard({ snap, t, onGoSources, onGoFind }) {
+      const [path, setPath] = React.useState('');
+      const [busy, setBusy] = React.useState(false);
+      const [error, setError] = React.useState('');
+      const [switchTarget, setSwitchTarget] = React.useState(null);
+
+      async function runImport() {
+        if (busy) return;
+        setBusy(true);
+        setError('');
+        try {
+          await importBook(path.trim());
+          setPath('');
+        } catch (failure) {
+          setError(t('settings.importFailed', { message: String(failure?.message ?? failure) }));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      const books = snap.books.map((book) => {
+        const progress = snap.progress[book.id] ?? { chapter: 0, page: 0 };
+        const source = snap.settings.sources.find((entry) => entry.id === book.sourceId);
+        return h('div', { key: book.id, className: 'my-book' },
+          h('div', { className: 'my-book-main' },
+            h('div', { className: 'my-book-title' }, book.title),
+            h('div', { className: 'my-book-meta' },
+              t('settings.chapters', { n: book.chapterCount ?? 1 }),
+              ' · ',
+              t('settings.progress', { c: progress.chapter + 1 }),
+              book.kind === 'online' && source !== undefined ? ` · ${t('book.source', { name: source.name })}` : '')),
+          h('button', { className: 'my-btn primary', onClick: () => { openBook(book.id); store.set({ active: true }); } }, t('settings.read')),
+          book.kind === 'online'
+            ? h('button', { className: 'my-btn', onClick: () => setSwitchTarget(book) }, t('switch.title'))
+            : null,
+          h('button', { className: 'my-btn', onClick: () => removeBook(book.id) }, t('settings.remove')));
+      });
+
+      return h('div', { className: 'my-card' },
+        h('h3', null, t('settings.bookshelf')),
+        h('div', { className: 'my-row' },
+          h('input', {
+            className: 'my-input-path',
+            value: path,
+            placeholder: t('settings.importPath'),
+            onChange: (event) => setPath(event.currentTarget.value),
+            onKeyDown: (event) => { if (event.key === 'Enter') runImport(); },
+          }),
+          h('button', { className: 'my-btn primary', disabled: busy, onClick: runImport },
+            busy ? t('settings.importing') : t('settings.import'))),
+        error === '' ? null : h('div', { className: 'my-error' }, error),
+        books.length === 0
+          ? h('div', null,
+            h('div', { className: 'my-sub' }, t('shelf.emptyHint')),
+            h('div', { className: 'my-row' },
+              h('button', { className: 'my-btn primary', onClick: onGoSources }, t('shelf.goSources')),
+              h('button', { className: 'my-btn', onClick: onGoFind }, t('shelf.goFind'))))
+          : books,
+        switchTarget === null ? null : h(SwitchSourcePanel, {
+          book: switchTarget,
+          snap,
+          t,
+          onClose: () => setSwitchTarget(null),
+        }));
+    }
+
+    function PreferencesCard({ snap, t }) {
+      return h(React.Fragment, null,
+        h('div', { className: 'my-card' },
+          h('h3', null, t('settings.reading')),
+          h('div', { className: 'my-row' },
+            h('span', { className: 'my-sub' }, t('settings.charsPerPage')),
+            h('input', {
+              className: 'my-num', type: 'number', min: 20, max: 400, step: 4,
+              value: snap.settings.charsPerPage,
+              onChange: (event) => setSettings({ charsPerPage: Math.max(20, Number(event.currentTarget.value) || 72) }),
+            })),
+          h('div', { className: 'my-sub' }, t('settings.charsPerPageHint'))),
+        h('div', { className: 'my-card' },
+          h('h3', null, t('settings.shortcuts')),
+          h('div', { className: 'my-kbd' },
+            h('div', null, h('code', null, 'Cmd/Ctrl + ↑'), '  ', t('shortcut.prevPage')),
+            h('div', null, h('code', null, 'Cmd/Ctrl + ↓'), '  ', t('shortcut.nextPage')),
+            h('div', null, h('code', null, 'Cmd/Ctrl + ←'), '  ', t('shortcut.prevChapter')),
+            h('div', null, h('code', null, 'Cmd/Ctrl + →'), '  ', t('shortcut.nextChapter')),
+            h('div', null, h('code', null, 'Cmd/Ctrl + ;'), '  ', t('shortcut.jump')),
+            h('div', null, h('code', null, 'Cmd/Ctrl + L'), '  ', t('shortcut.toc')),
+            h('div', null, h('code', null, 'Cmd/Ctrl + Shift + M'), '  ', t('shortcut.boss')))));
     }
 
     function SwitchSourcePanel({ book, snap, t, onClose }) {
@@ -2633,93 +2800,52 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const tr = useT(locale);
       t = t ?? tr;
       const snap = useStore(store);
-      const [path, setPath] = React.useState('');
-      const [busy, setBusy] = React.useState(false);
-      const [error, setError] = React.useState('');
-      const [switchTarget, setSwitchTarget] = React.useState(null);
+      const [tab, setTab] = React.useState('shelf');
+      const [findRequest, setFindRequest] = React.useState(null);
 
-      async function runImport() {
-        if (busy) return;
-        setBusy(true);
-        setError('');
-        try {
-          await importBook(path.trim());
-          setPath('');
-        } catch (failure) {
-          setError(t('settings.importFailed', { message: String(failure?.message ?? failure) }));
-        } finally {
-          setBusy(false);
-        }
+      const tabs = [
+        ['shelf', t('settings.bookshelf')],
+        ['find', t('find.title')],
+        ['sources', t('settings.tabs.sources')],
+        ['prefs', t('settings.tabs.prefs')],
+      ];
+
+      function goFind(sourceId, keyword) {
+        setFindRequest({ sourceId, keyword, nonce: Date.now() });
+        setTab('find');
       }
-
-      const books = snap.books.map((book) => {
-        const progress = snap.progress[book.id] ?? { chapter: 0, page: 0 };
-        const source = snap.settings.sources.find((entry) => entry.id === book.sourceId);
-        return h('div', { key: book.id, className: 'my-book' },
-          h('div', { className: 'my-book-main' },
-            h('div', { className: 'my-book-title' }, book.title),
-            h('div', { className: 'my-book-meta' },
-              t('settings.chapters', { n: book.chapterCount ?? 1 }),
-              ' · ',
-              t('settings.progress', { c: progress.chapter + 1 }),
-              book.kind === 'online' && source !== undefined ? ` · ${t('book.source', { name: source.name })}` : '')),
-          h('button', { className: 'my-btn', onClick: () => { openBook(book.id); store.set({ active: true }); } }, t('settings.read')),
-          book.kind === 'online'
-            ? h('button', { className: 'my-btn', onClick: () => setSwitchTarget(book) }, t('switch.title'))
-            : null,
-          h('button', { className: 'my-btn', onClick: () => removeBook(book.id) }, t('settings.remove')));
-      });
 
       return h('div', { className: 'my-settings' },
         h('style', { dangerouslySetInnerHTML: { __html: CSS } }),
         h('div', null,
           h('h2', null, t('settings.title')),
           h('div', { className: 'my-sub' }, t('settings.subtitle'))),
+        h('div', { className: 'my-tabs' },
+          tabs.map(([id, label]) => h('button', {
+            key: id,
+            className: `my-tab${tab === id ? ' active' : ''}`,
+            onClick: () => setTab(id),
+          }, label))),
 
-        h('div', { className: 'my-card' },
-          h('h3', null, t('settings.bookshelf')),
-          h('div', { className: 'my-row' },
-            h('input', {
-              className: 'my-input-path',
-              value: path,
-              placeholder: t('settings.importPath'),
-              onChange: (event) => setPath(event.currentTarget.value),
-              onKeyDown: (event) => { if (event.key === 'Enter') runImport(); },
-            }),
-            h('button', { className: 'my-btn primary', disabled: busy, onClick: runImport },
-              busy ? t('settings.importing') : t('settings.import'))),
-          error === '' ? null : h('div', { className: 'my-error' }, error),
-          books.length === 0 ? h('div', { className: 'my-sub' }, t('settings.empty')) : books,
-          switchTarget === null ? null : h(SwitchSourcePanel, {
-            book: switchTarget,
+        h('div', { style: { display: tab === 'shelf' ? 'block' : 'none' } },
+          h(ShelfCard, {
             snap,
             t,
-            onClose: () => setSwitchTarget(null),
+            onGoSources: () => setTab('sources'),
+            onGoFind: () => setTab('find'),
           })),
-
-        h('div', { className: 'my-card' },
-          h('h3', null, t('settings.reading')),
-          h('div', { className: 'my-row' },
-            h('span', { className: 'my-sub' }, t('settings.charsPerPage')),
-            h('input', {
-              className: 'my-num', type: 'number', min: 20, max: 400, step: 4,
-              value: snap.settings.charsPerPage,
-              onChange: (event) => setSettings({ charsPerPage: Math.max(20, Number(event.currentTarget.value) || 72) }),
-            })),
-          h('div', { className: 'my-sub' }, t('settings.charsPerPageHint'))),
-
-        h('div', { className: 'my-card' },
-          h('h3', null, t('settings.shortcuts')),
-          h('div', { className: 'my-kbd' },
-            h('div', null, h('code', null, 'Cmd/Ctrl + ↑'), '  ', t('shortcut.prevPage')),
-            h('div', null, h('code', null, 'Cmd/Ctrl + ↓'), '  ', t('shortcut.nextPage')),
-            h('div', null, h('code', null, 'Cmd/Ctrl + ←'), '  ', t('shortcut.prevChapter')),
-            h('div', null, h('code', null, 'Cmd/Ctrl + →'), '  ', t('shortcut.nextChapter')),
-            h('div', null, h('code', null, 'Cmd/Ctrl + ;'), '  ', t('shortcut.jump')),
-            h('div', null, h('code', null, 'Cmd/Ctrl + L'), '  ', t('shortcut.toc')),
-            h('div', null, h('code', null, 'Cmd/Ctrl + Shift + M'), '  ', t('shortcut.boss')))),
-
-        h(OnlineSourcesCard, { snap, t }));
+        h('div', { style: { display: tab === 'find' ? 'block' : 'none' } },
+          h(FindBooksCard, {
+            snap,
+            t,
+            request: findRequest,
+            onConsumed: () => setFindRequest(null),
+            onGoSources: () => setTab('sources'),
+          })),
+        h('div', { style: { display: tab === 'sources' ? 'block' : 'none' } },
+          h(SourcesCard, { snap, t, onSearch: goFind })),
+        h('div', { style: { display: tab === 'prefs' ? 'block' : 'none' } },
+          h(PreferencesCard, { snap, t })));
     }
 
     // ------------------------------------------------------------------

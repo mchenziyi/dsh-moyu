@@ -216,7 +216,7 @@ if (!restored.includes('第一章内容开始') && !restored.includes('测试内
 // settings page
 const settingsEntry = slotRegistrations.find((entry) => entry.registration.name === 'settings.section');
 const settingsText = await renderTree(settingsEntry.component, { t, api });
-for (const needle of ['上班摸鱼才叫赚钱', '测试小说', '导入', '每页字数', '在线书源', '搜书', 'AI 解析', '手动新建', 'Cmd/Ctrl + ↓']) {
+for (const needle of ['上班摸鱼才叫赚钱', '测试小说', '导入', '书架', '找书', '在线书源', '设置']) {
   if (!settingsText.includes(needle)) failures.push(`settings missing ${needle}`);
 }
 
