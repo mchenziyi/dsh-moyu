@@ -100,12 +100,32 @@ window.__ModuleLoader__.load({
       'source.detected': '已识别搜索地址',
       'source.noSearchForm': '首页没有找到 GET 搜索表单，请手动填写搜索地址',
       'source.minimal': '最少只需要：站点地址、搜索地址、搜索结果项、目录项、正文容器；标题和链接会自动推导。',
-      'source.advanced': 'Advanced (title/link/author/remove nodes; derived by default)',
-      'source.detectSearch': 'Detect search from homepage',
-      'source.detected': 'Search URL detected',
-      'source.noSearchForm': 'No GET search form on the homepage; fill the search URL manually',
-      'source.minimal': 'Minimum: site URL, search URL, search item, TOC item, content container. Titles and links are derived.',
-      'source.hint': '填好下面的表单，点「测试书源」验证 搜索 → 目录 → 正文 链路，再保存。选择器支持 selector@text、selector@href，以及 a || b 多候选。',
+      'source.hint': '填好下面的表单，点「测试书源」验证 搜索 → 目录 → 正文 链路，再保存；也可以先用上面的 AI 解析自动生成。选择器支持 selector@text、selector@href，以及 a || b 多候选。',
+      'ai.title': 'AI 解析书源',
+      'ai.hint': '粘贴书源地址（首页或书籍页），用当前默认模型自动生成选择器规则；页面 HTML 会发送给模型。',
+      'ai.url': '书源地址，例如 https://example.com',
+      'ai.keyword': '测试关键词（可选，默认「小说」）',
+      'ai.button': 'AI 解析',
+      'ai.busy': '解析中…',
+      'ai.stageHome': '读取首页…',
+      'ai.stageAnalyzeHome': '分析首页，识别搜索入口…',
+      'ai.stageSearch': '分析搜索结果…',
+      'ai.stageBook': '读取书籍页…',
+      'ai.stageToc': '分析目录…',
+      'ai.stageChapter': '读取章节页…',
+      'ai.stageContent': '分析正文…',
+      'ai.needUrl': '先填书源地址',
+      'ai.noBookPage': '没能找到书籍页：把书籍页 URL 填到下面的「书籍页 URL」再解析一次',
+      'ai.done': '解析完成：{name}',
+      'ai.failed': 'AI 解析失败：{message}',
+      'ai.retry': '选择器校验失败，正在让模型修正…',
+      'ai.saveRead': '保存并开始阅读',
+      'ai.saving': '保存中…',
+      'ai.saved': '已保存书源并加入书架',
+      'ai.searchEmpty': '搜索页没有匹配到结果',
+      'ai.tocEmpty': '目录页没有匹配到章节',
+      'ai.contentEmpty': '正文页没有匹配到内容',
+      'ai.model': '模型：{model}',
       'switch.title': '换源',
       'switch.source': '目标书源',
       'switch.keyword': '书名或作者',
@@ -219,6 +239,36 @@ window.__ModuleLoader__.load({
       'source.edit': 'Edit',
       'source.remove': 'Remove',
       'source.hint': 'Fill the form, run Test source to verify search → TOC → content, then save. Selectors accept selector@text, selector@href, and a || b fallbacks.',
+      'source.advanced': 'Advanced (title/link/author/remove nodes; derived by default)',
+      'source.detectSearch': 'Detect search from homepage',
+      'source.detected': 'Search URL detected',
+      'source.noSearchForm': 'No GET search form on the homepage; fill the search URL manually',
+      'source.minimal': 'Minimum: site URL, search URL, search item, TOC item, content container. Titles and links are derived.',
+      'ai.title': 'AI source parser',
+      'ai.hint': 'Paste a source URL (homepage or book page) and let the current default model generate the selectors. Page HTML is sent to the model.',
+      'ai.url': 'Source URL, e.g. https://example.com',
+      'ai.keyword': 'Test keyword (optional; defaults to 小说)',
+      'ai.button': 'Parse with AI',
+      'ai.busy': 'Parsing…',
+      'ai.stageHome': 'Reading homepage…',
+      'ai.stageAnalyzeHome': 'Finding the search entry…',
+      'ai.stageSearch': 'Analyzing search results…',
+      'ai.stageBook': 'Reading book page…',
+      'ai.stageToc': 'Analyzing contents…',
+      'ai.stageChapter': 'Reading chapter page…',
+      'ai.stageContent': 'Analyzing content…',
+      'ai.needUrl': 'Fill the source URL first',
+      'ai.noBookPage': 'No book page found: put one in the book page URL field below and parse again',
+      'ai.done': 'Parsed: {name}',
+      'ai.failed': 'AI parse failed: {message}',
+      'ai.retry': 'Selector check failed; asking the model to fix it…',
+      'ai.saveRead': 'Save and start reading',
+      'ai.saving': 'Saving…',
+      'ai.saved': 'Source saved and book added to the shelf',
+      'ai.searchEmpty': 'No results matched on the search page',
+      'ai.tocEmpty': 'No chapters matched on the contents page',
+      'ai.contentEmpty': 'No content matched on the chapter page',
+      'ai.model': 'Model: {model}',
       'switch.title': 'Switch source',
       'switch.source': 'Target source',
       'switch.keyword': 'Title or author',
@@ -600,14 +650,20 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 
     function pickOne(root, spec) {
       if (typeof spec !== 'string' || spec === '' || root === null) return '';
-      let selector = spec;
+      let selector = spec.trim();
       let attribute = null;
-      const at = spec.lastIndexOf('@');
-      if (at > 0) {
-        selector = spec.slice(0, at);
-        attribute = spec.slice(at + 1);
+      const suffix = /^(.*?)@([\w-]+)$/.exec(selector);
+      if (suffix !== null) {
+        selector = suffix[1].trim();
+        attribute = suffix[2];
       }
-      const node = selector === '' ? root : root.querySelector(selector);
+      if (selector === '' && attribute === null) return '';
+      let node;
+      try {
+        node = selector === '' ? root : root.querySelector(selector);
+      } catch {
+        return '';
+      }
       if (node === null) return '';
       if (attribute === null || attribute === 'text') return textOf(node);
       if (attribute === 'html') return node.innerHTML ?? '';
@@ -641,37 +697,19 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       });
       const page = await proxyFetch(url, signal);
       const doc = parseHtml(page.text);
-      const items = [...doc.querySelectorAll(source.search.list)];
-      return items.map((item) => ({
-        title: pickFrom(item, source.search.title) || textOf(item) || pickFrom(item, 'a@text') || '',
-        author: pickFrom(item, source.search.author),
-        bookUrl: resolveUrl(pickFrom(item, source.search.bookUrl || 'a@href'), page.finalUrl),
-      })).filter((result) => result.bookUrl !== '');
+      return probeSearchResults(source.search, doc, page.finalUrl);
     }
 
     async function fetchToc(source, bookUrl, signal) {
       const page = await proxyFetch(bookUrl, signal);
       const doc = parseHtml(page.text);
-      const items = [...doc.querySelectorAll(source.toc.list)];
-      const chapters = items.map((item) => ({
-        title: pickFrom(item, source.toc.title) || (item.textContent ?? '').trim(),
-        url: resolveUrl(pickFrom(item, source.toc.chapterUrl || 'a@href'), page.finalUrl),
-      })).filter((chapter) => chapter.url !== '');
-      return {
-        title: pickFrom(doc, source.toc.bookTitle),
-        chapters,
-      };
+      return probeToc(source.toc, doc, page.finalUrl);
     }
 
     async function fetchOnlineContent(source, chapterUrl, signal) {
       const page = await proxyFetch(chapterUrl, signal);
       const doc = parseHtml(page.text);
-      for (const selector of ['script', 'style', 'noscript', ...source.content.remove]) {
-        for (const node of [...doc.querySelectorAll(selector)]) node.remove();
-      }
-      const node = doc.querySelector(source.content.text);
-      if (node === null) throw new Error('正文选择器没有匹配到内容');
-      return textOf(node);
+      return probeContent(source.content, doc);
     }
 
     const localTocCache = new Map();
@@ -711,6 +749,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const cacheKey = `${book.id}@${index}`;
       let content = contentCache.get(cacheKey);
       if (content === undefined) {
+        const source = store.get().settings.sources.find((entry) => entry.id === book.sourceId);
+        if (source === undefined) throw new Error('书源已删除');
         content = await fetchOnlineContent(source, chapter.url, signal);
         contentCache.set(cacheKey, content);
       }
@@ -775,6 +815,640 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         active: true,
       });
       tocCache.set(id, toc.chapters);
+    }
+
+    // ------------------------------------------------------------------
+    // AI source parser
+    // ------------------------------------------------------------------
+
+    const AI_PAGE_HTML_LIMIT = 100_000;
+    const AI_HINTS_LIMIT = 8_000;
+    const AI_MAX_ATTEMPTS = 2;
+
+    function cssEscape(value) {
+      if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(value);
+      return String(value).replace(/[^a-zA-Z0-9_-]/g, (char) => `\\${char}`);
+    }
+
+    function collapseText(value, max = 120) {
+      return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+    }
+
+    /** Build a short selector that points at one element of the page. */
+    function selectorOf(node, doc) {
+      if (node === null || node === undefined || node.nodeType !== 1) return '';
+      if (typeof node.id === 'string' && node.id !== '') return `#${cssEscape(node.id)}`;
+      const parts = [];
+      let current = node;
+      while (current !== null && current !== undefined && current.nodeType === 1 && current !== doc.body && parts.length < 6) {
+        let part = current.tagName.toLowerCase();
+        const classes = [...(current.classList ?? [])].filter((name) => /^[A-Za-z][\w-]*$/.test(name)).slice(0, 2);
+        if (classes.length > 0) part += `.${classes.map(cssEscape).join('.')}`;
+        const parent = current.parentElement;
+        if (parent !== null && parent !== undefined) {
+          const sameTag = [...parent.children].filter((sibling) => sibling.tagName === current.tagName);
+          if (sameTag.length > 1) part += `:nth-of-type(${sameTag.indexOf(current) + 1})`;
+        }
+        parts.unshift(part);
+        if (typeof current.id === 'string' && current.id !== '') {
+          parts[0] = `#${cssEscape(current.id)}`;
+          break;
+        }
+        try {
+          if (doc.querySelectorAll(parts.join(' > ')).length === 1) return parts.join(' > ');
+        } catch {
+          /* keep walking */
+        }
+        current = parent;
+      }
+      return parts.join(' > ');
+    }
+
+    function anchorsIn(root) {
+      return [...root.querySelectorAll('a')].filter((anchor) => (anchor.getAttribute?.('href') ?? '') !== '');
+    }
+
+    /** Page HTML without scripts/styles, bounded for a model prompt. */
+    function digestHtml(doc) {
+      const clone = doc.cloneNode(true);
+      for (const node of [...clone.querySelectorAll('script,style,noscript,iframe,svg,canvas,template')]) node.remove();
+      const html = String(clone.body?.outerHTML ?? clone.documentElement?.outerHTML ?? '').replace(/<!--[\s\S]*?-->/g, '');
+      return html.length > AI_PAGE_HTML_LIMIT ? `${html.slice(0, AI_PAGE_HTML_LIMIT)}\n<!-- truncated -->` : html;
+    }
+
+    function repeatedGroups(doc, limit = 8) {
+      const groups = [];
+      let inspected = 0;
+      for (const parent of doc.querySelectorAll('body *')) {
+        if (inspected >= 1500) break;
+        inspected += 1;
+        const children = [...(parent.children ?? [])].filter((child) => anchorsIn(child).length > 0);
+        if (children.length < 3) continue;
+        const selector = selectorOf(parent, doc);
+        if (selector === '') continue;
+        const signature = children[0].tagName.toLowerCase()
+          + [...(children[0].classList ?? [])].slice(0, 2).map((name) => `.${name}`).join('');
+        const samples = children.slice(0, 3).map((child) => {
+          const anchor = anchorsIn(child)[0];
+          return `${collapseText(child.textContent, 50)} → ${collapseText(anchor?.getAttribute('href') ?? '', 70)}`;
+        });
+        groups.push({ selector, signature, count: children.length, samples });
+      }
+      const seen = new Map();
+      for (const group of groups) {
+        const previous = seen.get(group.selector);
+        if (previous === undefined || group.count > previous.count) seen.set(group.selector, group);
+      }
+      return [...seen.values()].sort((a, b) => b.count - a.count).slice(0, limit);
+    }
+
+    function linkContainers(doc, limit = 8) {
+      const seen = new Set();
+      const rows = [];
+      let inspected = 0;
+      for (const element of doc.querySelectorAll('body *')) {
+        if (inspected >= 1500) break;
+        inspected += 1;
+        const links = anchorsIn(element);
+        if (links.length < 5) continue;
+        const selector = selectorOf(element, doc);
+        if (selector === '' || seen.has(selector)) continue;
+        seen.add(selector);
+        rows.push({
+          selector,
+          count: links.length,
+          samples: links.slice(0, 4).map((anchor) => `${collapseText(anchor.textContent, 40)} → ${collapseText(anchor.getAttribute('href') ?? '', 70)}`),
+        });
+      }
+      return rows.sort((a, b) => b.count - a.count).slice(0, limit);
+    }
+
+    function textBlocks(doc, limit = 10) {
+      const blocks = [];
+      let inspected = 0;
+      for (const element of doc.querySelectorAll('body *')) {
+        if (inspected >= 2000) break;
+        inspected += 1;
+        if (['HTML', 'BODY', 'SCRIPT', 'STYLE', 'NOSCRIPT'].includes(element.tagName)) continue;
+        const text = (element.textContent ?? '').replace(/\s+/g, ' ').trim();
+        if (text.length < 180) continue;
+        blocks.push({ element, text, linkText: linkTextLength(element) });
+      }
+      blocks.sort((a, b) => b.text.length - a.text.length);
+      const kept = [];
+      for (const block of blocks) {
+        if (kept.some((entry) => block.element.contains(entry.element))) continue;
+        kept.push(block);
+        if (kept.length >= limit) break;
+      }
+      return kept.map((block) => ({
+        selector: selectorOf(block.element, doc),
+        length: block.text.length,
+        linkRatio: block.text.length === 0 ? 0 : block.linkText / block.text.length,
+        paragraphs: block.element.querySelectorAll('p').length,
+        breaks: block.element.querySelectorAll('br').length,
+        preview: collapseText(block.text, 120),
+      }));
+    }
+
+    function linkTextLength(element) {
+      let total = 0;
+      for (const anchor of anchorsIn(element)) total += (anchor.textContent ?? '').replace(/\s+/g, ' ').trim().length;
+      return total;
+    }
+
+    /**
+     * Pick one likely body container: an innermost element whose id/class
+     * signals "content", else the densest large text block.
+     */
+    function recommendContentContainer(doc) {
+      const named = [];
+      for (const element of doc.querySelectorAll('body *')) {
+        if (['HTML', 'BODY', 'SCRIPT', 'STYLE', 'NOSCRIPT'].includes(element.tagName)) continue;
+        const name = `${typeof element.id === 'string' ? element.id : ''} ${[...(element.classList ?? [])].join(' ')}`.toLowerCase();
+        if (!/content|read|article|chapter|txt|正文/.test(name)) continue;
+        const text = (element.textContent ?? '').replace(/\s+/g, ' ').trim();
+        if (text.length < 150) continue;
+        const linkText = linkTextLength(element);
+        named.push({ element, length: text.length, linkRatio: linkText / text.length });
+      }
+      const innermost = named.filter((candidate) => !named.some((other) => other !== candidate && candidate.element.contains(other.element)));
+      const pool = innermost.length > 0 ? innermost : named;
+      if (pool.length === 0) {
+        const blocks = textBlocks(doc, 6);
+        if (blocks.length === 0) return null;
+        const best = [...blocks].sort((a, b) => (b.length * (1 - b.linkRatio)) - (a.length * (1 - a.linkRatio)))[0];
+        return best === undefined ? null : best;
+      }
+      pool.sort((a, b) => (b.length * (1 - b.linkRatio)) - (a.length * (1 - a.linkRatio)));
+      const best = pool[0];
+      return { selector: selectorOf(best.element, doc), length: best.length, linkRatio: best.linkRatio };
+    }
+
+    function formatRows(title, rows) {
+      return rows.length === 0 ? [] : [title, ...rows.map((row) => `- ${row}`)];
+    }
+
+    /** Compact page outline handed to the model beside the HTML digest. */
+    function buildHints(stage, doc) {
+      const lines = [];
+      const title = collapseText(doc.title ?? '', 120);
+      if (title !== '') lines.push(`页面标题：${title}`);
+      if (stage === 'homepage') {
+        const forms = [];
+        for (const formElement of [...doc.querySelectorAll('form')].slice(0, 6)) {
+          const inputs = [...formElement.querySelectorAll('input[name]')].slice(0, 4).map((input) => {
+            const field = input.getAttribute('name') ?? '';
+            const placeholder = collapseText(input.getAttribute('placeholder') ?? '', 30);
+            return placeholder === '' ? field : `${field}（${placeholder}）`;
+          });
+          forms.push(`method=${(formElement.getAttribute('method') ?? 'get').toLowerCase()} action=${formElement.getAttribute('action') ?? ''} inputs=${inputs.join(', ')}`);
+        }
+        lines.push(...formatRows('表单：', forms));
+        const searchLinks = [...doc.querySelectorAll('a')]
+          .filter((anchor) => /search|so\.|s\.php|搜索/i.test(`${anchor.getAttribute('href') ?? ''} ${anchor.textContent ?? ''}`))
+          .slice(0, 6);
+        lines.push(...formatRows('搜索入口候选：', searchLinks.map((anchor) => `${collapseText(anchor.textContent, 20)} → ${collapseText(anchor.getAttribute('href') ?? '', 70)}`)));
+        const navHref = /\/(sort|top|full|bookcase|modules|user|login|register|xuanhuanxiaoshuo|xiuzhenxiaoshuo|dushixiaoshuo|chuanyuexiaoshuo|wangyouxiaoshuo|kehuanxiaoshuo|lishi|junshi|paihangbang|xiaoshuodaquan)(\/|$)/i;
+        const numericBookHref = /^\/\d+_\d+\/?$/;
+        const namedBookHref = /\/(book|read|txt|novel|info|chapter|list)(\/|$)/i;
+        const bookLinks = [...doc.querySelectorAll('a')]
+          .map((anchor) => {
+            const href = anchor.getAttribute('href') ?? '';
+            const text = collapseText(anchor.textContent, 30);
+            let score = 0;
+            if (numericBookHref.test(href)) score += 3;
+            if (namedBookHref.test(href)) score += 2;
+            if (/小说|阅读|章节|全文/i.test(text) && text.length <= 20) score += 1;
+            if (navHref.test(href)) score -= 4;
+            if (text === '' || /首页|书架|排行|分类|登录|注册/.test(text)) score -= 2;
+            return { href, text, score };
+          })
+          .filter((entry) => entry.score > 0 && entry.href !== '' && entry.href !== '#' && !/^javascript:/i.test(entry.href))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 8);
+        lines.push(...formatRows('书籍链接候选：', bookLinks.map((entry) => `${entry.text} → ${collapseText(entry.href, 70)}`)));
+        lines.push(...formatRows('重复块候选：', repeatedGroups(doc, 6).map((group) => `${group.selector} → ${group.count} 个 ${group.signature}，例：${group.samples[0] ?? ''}`)));
+      } else if (stage === 'search') {
+        lines.push(...formatRows('重复块候选：', repeatedGroups(doc, 8).map((group) => `${group.selector} → ${group.count} 个 ${group.signature}，例：${group.samples[0] ?? ''}`)));
+        lines.push(...formatRows('链接较多的容器：', linkContainers(doc, 5).map((group) => `${group.selector} → ${group.count} 个链接，例：${group.samples[0] ?? ''}`)));
+      } else if (stage === 'toc') {
+        const headings = [...doc.querySelectorAll('h1,h2,h3')].slice(0, 5).map((node) => collapseText(node.textContent, 60)).filter((value) => value !== '');
+        lines.push(...formatRows('标题候选：', headings));
+        lines.push(...formatRows('链接较多的容器：', linkContainers(doc, 8).map((group) => `${group.selector} → ${group.count} 个链接，例：${group.samples[0] ?? ''}`)));
+        lines.push(...formatRows('重复块候选：', repeatedGroups(doc, 6).map((group) => `${group.selector} → ${group.count} 个 ${group.signature}，例：${group.samples[0] ?? ''}`)));
+      } else {
+        const recommended = recommendContentContainer(doc);
+        if (recommended !== null) {
+          lines.push(`推荐正文容器：${recommended.selector}（${recommended.length} 字，链接占比 ${Math.round(recommended.linkRatio * 100)}%）`);
+        }
+        lines.push(...formatRows('正文候选（按文字长度）：', textBlocks(doc, 10).map((block) => `${block.selector} → ${block.length} 字，链接占比 ${Math.round(block.linkRatio * 100)}%，${block.paragraphs} 个 p，${block.breaks} 个 br，例：${block.preview}`)));
+      }
+      return lines.join('\n').slice(0, AI_HINTS_LIMIT);
+    }
+
+    function selectorsOf(spec) {
+      return String(spec).split('||').map((part) => part.trim()).filter((part) => part !== '');
+    }
+
+    /** querySelectorAll with `a || b` selector fallbacks; invalid candidates are skipped. */
+    function queryAllIn(root, spec) {
+      for (const candidate of selectorsOf(spec)) {
+        try {
+          const nodes = [...root.querySelectorAll(candidate)];
+          if (nodes.length > 0) return nodes;
+        } catch {
+          /* try the next candidate */
+        }
+      }
+      return [];
+    }
+
+    /** querySelector with `a || b` selector fallbacks; invalid candidates are skipped. */
+    function queryOneIn(root, spec) {
+      for (const candidate of selectorsOf(spec)) {
+        try {
+          const node = root.querySelector(candidate);
+          if (node !== null) return node;
+        } catch {
+          /* try the next candidate */
+        }
+      }
+      return null;
+    }
+
+    function probeSearchResults(search, doc, baseUrl) {
+      if (search === null || search === undefined || typeof search.list !== 'string' || search.list.trim() === '') {
+        throw new Error('缺少搜索结果项选择器');
+      }
+      const items = queryAllIn(doc, search.list);
+      return items.map((item) => ({
+        title: pickFrom(item, search.title) || textOf(item) || pickFrom(item, 'a@text') || '',
+        author: pickFrom(item, search.author),
+        bookUrl: resolveUrl(pickFrom(item, search.bookUrl || 'a@href'), baseUrl),
+      })).filter((result) => result.bookUrl !== '');
+    }
+
+    function probeToc(toc, doc, baseUrl) {
+      if (toc === null || toc === undefined || typeof toc.list !== 'string' || toc.list.trim() === '') {
+        throw new Error('缺少目录项选择器');
+      }
+      const items = queryAllIn(doc, toc.list);
+      const chapters = items.map((item) => ({
+        title: pickFrom(item, toc.title) || (item.textContent ?? '').trim(),
+        url: resolveUrl(pickFrom(item, toc.chapterUrl || 'a@href'), baseUrl),
+      })).filter((chapter) => chapter.url !== '');
+      return {
+        title: pickFrom(doc, toc.bookTitle),
+        chapters,
+      };
+    }
+
+    function probeContent(content, doc) {
+      if (content === null || content === undefined || typeof content.text !== 'string' || content.text.trim() === '') {
+        throw new Error('缺少正文容器选择器');
+      }
+      const clone = doc.cloneNode(true);
+      const remove = Array.isArray(content.remove) ? content.remove : [];
+      for (const selector of ['script', 'style', 'noscript', ...remove]) {
+        let nodes = [];
+        try { nodes = [...clone.querySelectorAll(selector)]; } catch { continue; }
+        for (const node of nodes) node.remove();
+      }
+      const node = queryOneIn(clone, content.text);
+      if (node === null) throw new Error('正文选择器没有匹配到内容');
+      const text = textOf(node);
+      if (text.length < 20) throw new Error('正文内容太少');
+      return text;
+    }
+
+    async function postJson(path, body, signal) {
+      const response = await fetch(apiUrl(path), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+        signal,
+      });
+      if (!response.ok) {
+        let message = `HTTP ${response.status}`;
+        try {
+          const payload = await response.json();
+          if (typeof payload?.message === 'string') message = payload.message;
+        } catch {
+          /* keep the status line */
+        }
+        throw new Error(message);
+      }
+      return response.json();
+    }
+
+    async function aiStage(stage, payload, signal) {
+      const data = await postJson('moyu/online/ai', Object.assign({ stage }, payload), signal);
+      if (data === null || typeof data !== 'object' || data.result === null || typeof data.result !== 'object') {
+        throw new Error('AI 服务返回了意外内容');
+      }
+      return data;
+    }
+
+    /** Ask the model for one stage; validation failures are fed back once. */
+    async function aiStageWithRetry(stage, payload, validate, signal, onRetry) {
+      let previous;
+      let error = '';
+      for (let attempt = 0; attempt < AI_MAX_ATTEMPTS; attempt += 1) {
+        const data = await aiStage(stage, error === '' ? payload : Object.assign({}, payload, { previous, error }), signal);
+        try {
+          await validate(data.result);
+          return data;
+        } catch (failure) {
+          previous = data.result;
+          error = String(failure?.message ?? failure);
+          if (attempt + 1 < AI_MAX_ATTEMPTS && typeof onRetry === 'function') onRetry(error);
+        }
+      }
+      throw new Error(error);
+    }
+
+    /** Whether the page itself looks like a book detail / TOC page. */
+    function looksLikeBookPage(doc, pageUrl) {
+      const buckets = new Map();
+      for (const anchor of anchorsIn(doc)) {
+        const href = anchor.getAttribute('href') ?? '';
+        const absolute = resolveUrl(href, pageUrl);
+        if (absolute === '') continue;
+        let path;
+        try { path = new URL(absolute).pathname; } catch { continue; }
+        const segments = path.split('/').filter((part) => part !== '');
+        if (segments.length < 2) continue;
+        const prefix = segments.slice(0, -1).join('/');
+        if (prefix === '') continue;
+        const bucket = buckets.get(prefix) ?? [];
+        bucket.push(anchor);
+        buckets.set(prefix, bucket);
+      }
+      for (const bucket of buckets.values()) {
+        if (bucket.length < 20) continue;
+        let chapterLike = 0;
+        for (const anchor of bucket) {
+          const text = (anchor.textContent ?? '').trim();
+          if (/^第?[0-9零〇一二三四五六七八九十百千万两]+[章节回卷]/.test(text) || /^[0-9]+[\.、]/.test(text)) chapterLike += 1;
+        }
+        if (chapterLike >= 15) return true;
+      }
+      return false;
+    }
+
+    /** Extract the first GET search form on a page as a {{keyword}} template. */
+    function detectSearchFromDoc(doc, pageUrl) {
+      for (const formElement of [...doc.querySelectorAll('form')]) {
+        const method = (formElement.getAttribute('method') ?? 'get').toLowerCase();
+        if (method !== 'get') continue;
+        const input = formElement.querySelector('input[name]');
+        if (input === null) continue;
+        const field = input.getAttribute('name');
+        if (typeof field !== 'string' || field === '') continue;
+        const action = resolveUrl(formElement.getAttribute('action') ?? '', pageUrl) || pageUrl;
+        try {
+          const url = new URL(action);
+          url.searchParams.set(field, '{{keyword}}');
+          // URLSearchParams encodes braces; the rule engine needs the literal placeholder.
+          url.search = url.search.replace(/%7B%7Bkeyword%7D%7D/gi, '{{keyword}}');
+          return url.toString();
+        } catch {
+          return '';
+        }
+      }
+      return '';
+    }
+
+    function resolveTemplate(template, base) {
+      const value = String(template ?? '').trim();
+      if (value === '') return '';
+      try {
+        return new URL(value, base).toString();
+      } catch {
+        return '';
+      }
+    }
+
+    /** Keep the search placeholder literal and derive it from a concrete test URL when needed. */
+    function normalizeSearchTemplate(template, keyword) {
+      const value = String(template ?? '').trim();
+      if (value === '') return '';
+      let next = value
+        .replace(/%7B%7Bkeyword%7D%7D/gi, '{{keyword}}')
+        .replace(/\{\{\s*keyword\s*\}\}/gi, '{{keyword}}');
+      if (!next.includes('{{keyword}}')) {
+        const encoded = encodeURIComponent(keyword);
+        if (encoded !== '' && next.includes(encoded)) next = next.split(encoded).join('{{keyword}}');
+        else if (keyword !== '' && next.includes(keyword)) next = next.split(keyword).join('{{keyword}}');
+      }
+      return next;
+    }
+
+    /**
+     * Parse one site URL into a source rule: homepage → search → TOC → first
+     * chapter, with the model generating selectors at each stage. The browser
+     * owns the DOM, so every selector is validated against the real page before
+     * it is accepted.
+     */
+    async function parseSourceWithAi(startUrl, keyword, options) {
+      const opts = options ?? {};
+      const signal = opts.signal;
+      const report = typeof opts.onProgress === 'function' ? opts.onProgress : () => {};
+      const log = [];
+      const keywordText = String(keyword ?? '').trim() || '小说';
+
+      const raw = String(startUrl ?? '').trim();
+      if (raw === '') throw new Error('先填书源地址');
+      const entry = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+
+      report('home');
+      let homePage;
+      try {
+        homePage = await proxyFetch(entry, signal);
+      } catch (failure) {
+        throw new Error(`首页读取失败：${String(failure?.message ?? failure)}`);
+      }
+      const homeUrl = homePage.finalUrl || entry;
+      const homeDoc = parseHtml(homePage.text);
+      let baseUrl = homeUrl;
+      try { baseUrl = new URL(homeUrl).origin; } catch { /* keep the page URL */ }
+      const suppliedBookPage = looksLikeBookPage(homeDoc, homeUrl);
+      log.push(suppliedBookPage ? '页面类型：书籍页' : '页面类型：站点首页');
+      let name = '';
+      if (!suppliedBookPage) name = collapseText(homeDoc.title ?? '', 80).split(/[-_|—]/)[0].trim();
+      if (name === '') {
+        try { name = new URL(homeUrl).hostname.replace(/^www\./, ''); } catch { name = '未命名书源'; }
+      }
+      let searchUrl = normalizeSearchTemplate(detectSearchFromDoc(homeDoc, homeUrl), keywordText);
+      let sampleBookUrl = suppliedBookPage ? homeUrl : '';
+      let model = '';
+
+      if (searchUrl === '' && !suppliedBookPage) {
+        report('analyze-home');
+        const home = await aiStageWithRetry('homepage', {
+          url: homeUrl,
+          keyword: keywordText,
+          html: digestHtml(homeDoc),
+          hints: buildHints('homepage', homeDoc),
+        }, () => undefined, signal, () => report('analyze-home'));
+        model = `${home.model.provider}/${home.model.model}`;
+        if (home.result.name !== '') name = home.result.name;
+        if (home.result.baseUrl !== '') baseUrl = resolveTemplate(home.result.baseUrl, homeUrl) || baseUrl;
+        if (home.result.searchUrl !== '') {
+          searchUrl = normalizeSearchTemplate(resolveTemplate(home.result.searchUrl, homeUrl) || home.result.searchUrl, keywordText);
+        }
+        if (home.result.sampleBookUrl !== '') sampleBookUrl = resolveTemplate(home.result.sampleBookUrl, homeUrl);
+      }
+      log.push(`站点：${name} · ${baseUrl}`);
+
+      let searchRule = null;
+      let firstResult = null;
+      if (searchUrl !== '') {
+        report('search');
+        log.push(`搜索模板：${searchUrl}`);
+        try {
+          const searchPage = await proxyFetch(expandTemplate(searchUrl, {
+            base: baseUrl,
+            keyword: encodeURIComponent(keywordText),
+          }), signal);
+          if (String(searchPage.text ?? '').trim().length < 100) {
+            throw new Error('搜索页为空（站点可能不支持 GET 搜索）');
+          }
+          const searchDoc = parseHtml(searchPage.text);
+          const searchUrlActual = searchPage.finalUrl || searchUrl;
+          const parsed = await aiStageWithRetry('search', {
+            url: searchUrlActual,
+            keyword: keywordText,
+            html: digestHtml(searchDoc),
+            hints: buildHints('search', searchDoc),
+          }, (result) => {
+            if (probeSearchResults(result.search, searchDoc, searchUrlActual).length === 0) {
+              throw new Error('搜索结果项选择器在本页没有匹配到任何结果');
+            }
+          }, signal, () => report('search'));
+          searchRule = parsed.result.search;
+          const results = probeSearchResults(searchRule, searchDoc, searchUrlActual);
+          firstResult = results[0] ?? null;
+          log.push(`搜索：${results.length} 条${firstResult === null ? '' : `，例：${firstResult.title}`}`);
+        } catch (failure) {
+          log.push(`搜索规则未解析：${String(failure?.message ?? failure)}`);
+        }
+      } else {
+        log.push('未识别到搜索入口，将只生成目录 / 正文规则');
+      }
+      if (searchRule !== null) {
+        const template = normalizeSearchTemplate(
+          searchRule.url === '' ? searchUrl : (resolveTemplate(searchRule.url, baseUrl) || searchUrl),
+          keywordText,
+        );
+        searchRule = Object.assign({}, searchRule, { url: template });
+        if (!template.includes('{{keyword}}')) {
+          log.push('警告：搜索地址没有 {{keyword}} 占位符，搜索可能固定为测试关键词');
+        }
+      }
+
+      let bookUrl = '';
+      let bookDoc = null;
+      if (suppliedBookPage) {
+        bookUrl = homeUrl;
+        bookDoc = homeDoc;
+      } else if (firstResult !== null && firstResult.bookUrl !== '') {
+        bookUrl = firstResult.bookUrl;
+      } else if (sampleBookUrl !== '') {
+        bookUrl = sampleBookUrl;
+      } else if (searchUrl === '') {
+        // The supplied URL may itself be a book page: try it before asking for another URL.
+        bookUrl = homeUrl;
+        bookDoc = homeDoc;
+      } else {
+        const manual = typeof opts.bookUrl === 'string' ? opts.bookUrl.trim() : '';
+        if (manual === '') throw new Error('没能找到书籍页：把书籍页 URL 填到下面的「书籍页 URL」再解析一次');
+        bookUrl = /^https?:\/\//i.test(manual) ? manual : resolveUrl(manual, homeUrl);
+      }
+
+      if (bookDoc === null) {
+        report('book');
+        let tocPage;
+        try {
+          tocPage = await proxyFetch(bookUrl, signal);
+        } catch (failure) {
+          throw new Error(`书籍页读取失败：${String(failure?.message ?? failure)}`);
+        }
+        bookUrl = tocPage.finalUrl || bookUrl;
+        bookDoc = parseHtml(tocPage.text);
+      }
+
+      report('toc');
+      let tocStage;
+      try {
+        tocStage = await aiStageWithRetry('toc', {
+          url: bookUrl,
+          keyword: keywordText,
+          html: digestHtml(bookDoc),
+          hints: buildHints('toc', bookDoc),
+        }, (result) => {
+          if (probeToc(result.toc, bookDoc, bookUrl).chapters.length === 0) {
+            throw new Error('目录项选择器在本页没有匹配到章节');
+          }
+        }, signal, () => report('toc'));
+      } catch (failure) {
+        if (!suppliedBookPage && bookDoc === homeDoc) {
+          throw new Error('没能从当前地址识别目录：请把书籍页 URL 填到下面的「书籍页 URL」再解析一次');
+        }
+        throw failure;
+      }
+      model = `${tocStage.model.provider}/${tocStage.model.model}`;
+      const tocRule = tocStage.result.toc;
+      const toc = probeToc(tocRule, bookDoc, bookUrl);
+      log.push(`目录：${toc.chapters.length} 章 · 《${toc.title || name}》`);
+
+      report('chapter');
+      const firstChapter = toc.chapters[0];
+      let chapterPage;
+      try {
+        chapterPage = await proxyFetch(firstChapter.url, signal);
+      } catch (failure) {
+        throw new Error(`章节页读取失败：${String(failure?.message ?? failure)}`);
+      }
+      const chapterDoc = parseHtml(chapterPage.text);
+
+      report('content');
+      const contentStage = await aiStageWithRetry('content', {
+        url: chapterPage.finalUrl || firstChapter.url,
+        keyword: keywordText,
+        html: digestHtml(chapterDoc),
+        hints: buildHints('content', chapterDoc),
+      }, (result) => {
+        probeContent(result.content, chapterDoc);
+      }, signal, () => report('content'));
+      const contentRule = contentStage.result.content;
+      const text = probeContent(contentRule, chapterDoc);
+      log.push(`正文：${text.length} 字`);
+      log.push(`预览：${text.slice(0, 80)}`);
+      if (model !== '') log.push(`模型：${model}`);
+
+      const rule = normalizeSource({
+        id: name,
+        name,
+        baseUrl,
+        search: searchRule ?? undefined,
+        toc: tocRule,
+        content: contentRule,
+      });
+      log.push('', JSON.stringify(rule, null, 2));
+      return {
+        rule,
+        form: formFromRule(rule),
+        book: {
+          url: bookUrl,
+          title: toc.title || name,
+          author: firstResult?.author ?? '',
+        },
+        model,
+        log: log.join('\n'),
+      };
     }
 
     function removeBook(id) {
@@ -1149,6 +1823,14 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [searchResults, setSearchResults] = React.useState(null);
       const [addingUrl, setAddingUrl] = React.useState('');
       const [showAdvanced, setShowAdvanced] = React.useState(false);
+      const [aiUrl, setAiUrl] = React.useState('');
+      const [aiKeyword, setAiKeyword] = React.useState('');
+      const [aiBusy, setAiBusy] = React.useState(false);
+      const [aiStage, setAiStage] = React.useState('');
+      const [aiOutput, setAiOutput] = React.useState('');
+      const [aiError, setAiError] = React.useState('');
+      const [aiBook, setAiBook] = React.useState(null);
+      const [aiSaving, setAiSaving] = React.useState(false);
 
       const sources = snap.settings.sources;
       const searchable = sources.filter((source) => source.search !== null);
@@ -1171,6 +1853,63 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           }));
       }
 
+      const AI_STAGE_LABELS = {
+        'home': 'ai.stageHome',
+        'analyze-home': 'ai.stageAnalyzeHome',
+        'search': 'ai.stageSearch',
+        'book': 'ai.stageBook',
+        'toc': 'ai.stageToc',
+        'chapter': 'ai.stageChapter',
+        'content': 'ai.stageContent',
+      };
+
+      async function runAiParse() {
+        if (aiBusy) return;
+        setAiBusy(true);
+        setAiError('');
+        setAiOutput('');
+        setAiBook(null);
+        setAiStage(t('ai.busy'));
+        try {
+          const entry = (aiUrl.trim() !== '' ? aiUrl : form.baseUrl).trim();
+          const parsed = await parseSourceWithAi(entry, aiKeyword, {
+            bookUrl: testBookUrl,
+            onProgress: (stage) => setAiStage(t(AI_STAGE_LABELS[stage] ?? 'ai.busy')),
+          });
+          setForm(parsed.form);
+          setAiBook(parsed.book);
+          setAiOutput(parsed.log);
+          setAiStage('');
+          setTestError('');
+          setTestOutput('');
+        } catch (failure) {
+          setAiStage('');
+          setAiError(t('ai.failed', { message: String(failure?.message ?? failure) }));
+        } finally {
+          setAiBusy(false);
+        }
+      }
+
+      async function saveAiBook() {
+        if (aiBook === null || aiSaving) return;
+        setAiSaving(true);
+        setAiError('');
+        try {
+          const rule = ruleFromForm(form);
+          const current = store.get().settings.sources;
+          setSettings({ sources: [rule, ...current.filter((source) => source.id !== rule.id)] });
+          const toc = await fetchToc(rule, aiBook.url);
+          if (toc.chapters.length === 0) throw new Error('目录为空');
+          addOnlineBookToShelf(rule, { title: aiBook.title, author: aiBook.author, bookUrl: aiBook.url }, toc);
+          setAiOutput((previous) => `${previous}\n\n${t('ai.saved')}`);
+          setAiBook(null);
+        } catch (failure) {
+          setAiError(t('ai.failed', { message: String(failure?.message ?? failure) }));
+        } finally {
+          setAiSaving(false);
+        }
+      }
+
       async function detectSearchUrl() {
         setTestError('');
         setTestOutput('');
@@ -1179,16 +1918,9 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           if (base === '') throw new Error(t('source.minimal'));
           const page = await proxyFetch(base);
           const doc = parseHtml(page.text);
-          for (const formElement of [...doc.querySelectorAll('form')]) {
-            const method = (formElement.getAttribute('method') ?? 'get').toLowerCase();
-            if (method !== 'get') continue;
-            const input = formElement.querySelector('input[name]');
-            if (input === null) continue;
-            const name = input.getAttribute('name');
-            const action = resolveUrl(formElement.getAttribute('action') ?? '', page.finalUrl) || page.finalUrl;
-            const url = new URL(action);
-            url.searchParams.set(name, '{{keyword}}');
-            setField('searchUrl', url.toString());
+          const detected = detectSearchFromDoc(doc, page.finalUrl || base);
+          if (detected !== '') {
+            setField('searchUrl', detected);
             setTestOutput(t('source.detected'));
             return;
           }
@@ -1246,6 +1978,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 
       function editSource(source) {
         setForm(formFromRule(source));
+        setAiUrl(source.baseUrl);
+        setAiError('');
+        setAiOutput('');
+        setAiBook(null);
         setTestError('');
         setTestOutput('');
       }
@@ -1294,6 +2030,36 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       return h('div', { className: 'my-card' },
         h('h3', null, t('settings.sources')),
         h('div', { className: 'my-sub' }, t('source.hint')),
+
+        h('div', { className: 'my-form-section' },
+          h('h4', null, t('ai.title')),
+          h('div', { className: 'my-sub' }, t('ai.hint')),
+          h('div', { className: 'my-row' },
+            h('input', {
+              className: 'my-input-path',
+              value: aiUrl,
+              placeholder: t('ai.url'),
+              onChange: (event) => setAiUrl(event.currentTarget.value),
+              onKeyDown: (event) => { if (event.key === 'Enter') runAiParse(); },
+            }),
+            h('input', {
+              className: 'my-input-path',
+              style: { maxWidth: '220px' },
+              value: aiKeyword,
+              placeholder: t('ai.keyword'),
+              onChange: (event) => setAiKeyword(event.currentTarget.value),
+              onKeyDown: (event) => { if (event.key === 'Enter') runAiParse(); },
+            }),
+            h('button', { className: 'my-btn primary', disabled: aiBusy, onClick: runAiParse },
+              aiBusy ? t('ai.busy') : t('ai.button'))),
+          aiStage === '' ? null : h('div', { className: 'my-sub' }, aiStage),
+          aiError === '' ? null : h('div', { className: 'my-error' }, aiError),
+          aiOutput === '' ? null : h('pre', { className: 'my-debug-output' }, aiOutput),
+          aiBook === null ? null : h('div', { className: 'my-row' },
+            h('span', { className: 'my-sub' }, `${aiBook.title} · ${aiBook.url}`),
+            h('button', { className: 'my-btn primary', disabled: aiSaving, onClick: saveAiBook },
+              aiSaving ? t('ai.saving') : t('ai.saveRead')))),
+
         sources.length === 0 ? h('div', { className: 'my-sub' }, t('source.empty')) : sourceRows,
 
         h('div', { className: 'my-form-section' },
@@ -1614,6 +2380,9 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           removeBook,
           openBook,
           setSettings,
+          parseSourceWithAi(url, keyword, options) {
+            return parseSourceWithAi(url, keyword, options);
+          },
           addSource(text) {
             const parsed = JSON.parse(text);
             const source = normalizeSource(parsed);

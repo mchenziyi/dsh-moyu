@@ -152,6 +152,7 @@ const api = provided.moyu;
 function storeActiveReset() { api.toggleReading(); api.toggleReading(); }
 const failures = [];
 if (api === undefined) failures.push('moyu service missing');
+if (typeof api?.parseSourceWithAi !== 'function') failures.push('parseSourceWithAi missing');
 
 // registration surface
 const settingsIds = slotRegistrations
@@ -215,7 +216,7 @@ if (!restored.includes('第一章内容开始') && !restored.includes('测试内
 // settings page
 const settingsEntry = slotRegistrations.find((entry) => entry.registration.name === 'settings.section');
 const settingsText = await renderTree(settingsEntry.component, { t, api });
-for (const needle of ['上班摸鱼才叫赚钱', '测试小说', '导入', '每页字数', '在线书源', '新建书源', '测试书源', '保存书源', 'Cmd/Ctrl + ↓']) {
+for (const needle of ['上班摸鱼才叫赚钱', '测试小说', '导入', '每页字数', '在线书源', '新建书源', '测试书源', '保存书源', 'AI 解析', 'Cmd/Ctrl + ↓']) {
   if (!settingsText.includes(needle)) failures.push(`settings missing ${needle}`);
 }
 

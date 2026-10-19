@@ -1,6 +1,6 @@
 {
   "name": "@mchenziyi/dsh-moyu",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "description": "上班摸鱼才叫赚钱：DSH 里的摸鱼套件，第一个模块是伪装成底部状态栏的小说阅读器。",
   "author": "mchenziyi",
@@ -36,6 +36,13 @@
     "examples/*.json",
     "LICENSE"
   ],
+  "scripts": {
+    "test": "node test/host.mjs && node test/client.mjs",
+    "test:browser": "node test/browser.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
