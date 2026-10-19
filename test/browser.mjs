@@ -204,6 +204,65 @@ async function runInPage({ pages, replies, startUrl, keyword, failFirstSearch = 
   return result;
 }
 
+async function runApi({ pages, rule, book, chapterUrl }) {
+  const page = await browser.newPage();
+  await page.goto(origin);
+  await page.addScriptTag({ content: 'window.__ModuleLoader__ = { load(registration) { window.__captured = registration; } };' });
+  await page.addScriptTag({ path: clientPath });
+  const result = await page.evaluate(async ({ pages, rule, book, chapterUrl }) => {
+    const loader = window.__captured;
+    if (loader === undefined) throw new Error('client bundle did not register');
+    const React = {
+      Fragment: Symbol('Fragment'),
+      createElement(type, props, ...children) { return { type, props: props ?? {}, children }; },
+      useState(initial) { return [typeof initial === 'function' ? initial() : initial, () => {}]; },
+      useEffect() {},
+      useRef(initial) { return { current: initial }; },
+      useMemo(fn) { return fn(); },
+    };
+    const plugin = loader.factory((name) => {
+      if (name === 'react') return React;
+      throw new Error(`unexpected require ${name}`);
+    });
+    const scope = {
+      effect: (fn) => fn(),
+      slots: { inject: (_owner, callback) => callback(), register: () => () => {} },
+      locale: { register: () => () => {}, bind: () => (key) => key, getLocale: () => ({ active: 'zh' }), subscribe: () => () => {} },
+      shortcuts: { register: () => () => {} },
+      sidebarRight: { openTab() {}, close() {}, active: () => null },
+      sidebarRightTabs: { register: () => () => {} },
+    };
+    const provided = {};
+    const ctx = {
+      effect: (fn) => fn(),
+      provide: (name, value) => { provided[name] = value; return () => {}; },
+      inject: (_names, callback) => callback(scope),
+      slots: scope.slots,
+      locale: scope.locale,
+      get: () => undefined,
+    };
+    plugin.apply(ctx);
+    const api = provided.moyu;
+    window.fetch = async (input) => {
+      const url = new URL(String(input), location.href);
+      if (url.pathname === '/moyu/online/proxy') {
+        const target = url.searchParams.get('url');
+        const body = pages[target];
+        if (body === undefined) return { ok: false, status: 404, json: async () => ({ message: `no fixture ${target}` }) };
+        return { ok: true, status: 200, json: async () => ({ ok: true, status: 200, finalUrl: target, text: body, charset: 'utf-8' }) };
+      }
+      return { ok: false, status: 404, json: async () => ({ message: 'unexpected route' }) };
+    };
+    const saved = api.addSource(JSON.stringify(rule));
+    await api.addOnlineBook(saved.id, book);
+    const store = JSON.parse(localStorage.getItem('dsh.moyu.v1'));
+    const chapter = chapterUrl === undefined ? '' : await api.readOnlineChapter(saved.id, chapterUrl);
+    return { store, chapter };
+  }, { pages, rule, book, chapterUrl });
+  await page.close();
+  return result;
+}
+
 const failures = [];
 
 // 1. homepage with a GET search form: detection → search → TOC → content,
@@ -244,7 +303,7 @@ const second = await runInPage({
   startUrl: 'https://site3.test/',
   keyword: '遮天',
   replies: AI_REPLIES,
-  homepageReply: { name: 'LLM 书源', baseUrl: 'https://site3.test', searchUrl: 'https://site3.test/s?q={{keyword}}', sampleBookUrl: 'https://site3.test/book/9/' },
+  homepageReply: { name: 'LLM 书源', baseUrl: 'https://site3.test', searchUrl: 'https://site3.test/s?q={keyword}', sampleBookUrl: 'https://site3.test/book/9/' },
   pages: {
     'https://site3.test/': llmSearchHome,
     'https://site3.test/s?q=%E9%81%AE%E5%A4%A9': searchPage('遮天'),
@@ -291,6 +350,33 @@ const fourth = await runInPage({
 if (fourth.parsed?.rule?.search?.url !== 'https://probe.test/search?q={{keyword}}') failures.push(`probe search.url ${fourth.parsed?.rule?.search?.url}`);
 if (!String(fourth.parsed?.log ?? '').includes('探测到搜索地址')) failures.push('probe log missing');
 if (fourth.parsed?.book?.url !== 'https://probe.test/book/1/') failures.push(`probe book.url ${fourth.parsed?.book?.url}`);
+
+// 5. numeric TOC pagination + multi-page chapter concatenation.
+const pagedRule = {
+  id: 'paged', name: 'paged', baseUrl: 'https://paged.test', search: null,
+  toc: { list: '.toc-list a', title: '@text', chapterUrl: '@href', bookTitle: 'h1' },
+  content: { text: '#content', remove: [] },
+};
+const pagedBook = (chapters, active, next) => `<html><body><h1>分页书</h1>
+<div class="toc-list">${chapters.map((n) => `<a href="${n}.html">第${n}章</a>`).join('')}</div>
+<ul class="pagination"><li class="active"><a href="index_${active}.html">${active}</a></li>${next === undefined ? '' : `<li><a href="index_${next}.html">${next}</a></li>`}</ul>
+</body></html>`;
+const pagedChapter = (page, total, text) => `<html><body><h1>第1章</h1><article id="content">第(${page}/${total})页 ${text}</article></body></html>`;
+const fifth = await runApi({
+  rule: pagedRule,
+  book: { bookUrl: 'https://paged.test/book/1/', title: '分页书', author: '' },
+  chapterUrl: 'https://paged.test/book/1/1.html',
+  pages: {
+    'https://paged.test/book/1/': pagedBook([1, 2], 1, 2),
+    'https://paged.test/book/1/index_2.html': pagedBook([3, 4], 2),
+    'https://paged.test/book/1/1.html': pagedChapter(1, 2, '这是第一页的正文内容，写得足够长以便通过正文长度校验。'.repeat(2)),
+    'https://paged.test/book/1/1_2.html': pagedChapter(2, 2, '这是第二页的正文内容，同样写得足够长以便通过正文长度校验。'.repeat(2)),
+  },
+});
+if (fifth.store?.books?.[0]?.chapterCount !== 4) failures.push(`toc pagination ${fifth.store?.books?.[0]?.chapterCount}`);
+if (!String(fifth.chapter).includes('第一页的正文内容')) failures.push('chapter page 1 missing');
+if (!String(fifth.chapter).includes('第二页的正文内容')) failures.push('chapter page 2 missing');
+if (String(fifth.chapter).includes('第(1/2)页')) failures.push('chapter page marker leaked');
 
 await browser.close();
 server.close();

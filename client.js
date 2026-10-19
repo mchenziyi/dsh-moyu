@@ -588,7 +588,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       if (id === '') throw new Error('缺少 id 或 name');
       const name = text(raw.name) !== '' ? text(raw.name) : id;
       const ruleOf = (value) => (value !== null && typeof value === 'object' ? value : {});
-      const searchRule = raw.search === undefined ? null : ruleOf(raw.search);
+      const searchRule = raw.search === undefined || raw.search === null ? null : ruleOf(raw.search);
       const tocRule = ruleOf(raw.toc);
       const contentRule = ruleOf(raw.content);
       const search = searchRule === null ? null : {
@@ -667,7 +667,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
     }
 
     function expandTemplate(template, vars) {
-      return String(template).replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key) => (typeof vars[key] === 'string' ? vars[key] : ''));
+      // Accept both {{keyword}} and the single-brace {keyword} some models emit.
+      return String(template).replace(/\{\{?\s*(\w+)\s*\}?\}/g, (match, key) => (typeof vars[key] === 'string' ? vars[key] : ''));
     }
 
     function resolveUrl(href, base) {
@@ -744,16 +745,139 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       return probeSearchResults(source.search, doc, page.finalUrl);
     }
 
+    /** Follow a conventional "next page" link on a paginated TOC. */
+    function findNextTocPage(doc, pageUrl, bookUrl, visitedPages) {
+      let root;
+      try { root = new URL(pageUrl); } catch { return ''; }
+      let bookPath = '';
+      try { bookPath = new URL(bookUrl).pathname.replace(/[^/]*$/, ''); } catch { /* no prefix */ }
+      // Numeric pagination (1 2 3 ... N): follow the next higher page number.
+      let activeNumber = 0;
+      for (const active of doc.querySelectorAll('.pagination .active a, .pagination li.active a, .pages .active a')) {
+        const value = Number((active.textContent ?? '').replace(/\s+/g, ''));
+        if (Number.isInteger(value) && value > 0) {
+          activeNumber = value;
+          break;
+        }
+      }
+      if (activeNumber > 0) {
+        let nextNumeric = null;
+        for (const anchor of doc.querySelectorAll('.pagination a, .pages a, [class*="pagination"] a')) {
+          const text = (anchor.textContent ?? '').trim();
+          if (!/^\d+$/.test(text)) continue;
+          const number = Number(text);
+          if (!Number.isInteger(number) || number <= activeNumber) continue;
+          const href = resolveUrl(anchor.getAttribute('href') ?? '', pageUrl);
+          if (href === '' || href === pageUrl || visitedPages.has(href)) continue;
+          let target;
+          try { target = new URL(href); } catch { continue; }
+          if (target.origin !== root.origin) continue;
+          if (bookPath !== '' && !target.pathname.startsWith(bookPath)) continue;
+          if (nextNumeric === null || number < nextNumeric.number) nextNumeric = { href, number };
+        }
+        if (nextNumeric !== null) return nextNumeric.href;
+      }
+
+      const candidates = [];
+      for (const anchor of anchorsIn(doc)) {
+        const text = (anchor.textContent ?? '').replace(/\s+/g, ' ').trim();
+        const label = `${text} ${anchor.getAttribute('aria-label') ?? ''} ${anchor.getAttribute('rel') ?? ''} ${anchor.className ?? ''}`.toLowerCase();
+        let score = 0;
+        if (/^(下一页|下页|next)$/i.test(text)) score += 5;
+        else if (text === '>' || text === '›') score += 3;
+        if (/next/.test(label)) score += 2;
+        if (text === '»' || text === '尾页' || text === '末页') score -= 5;
+        if (score <= 0) continue;
+        const href = resolveUrl(anchor.getAttribute('href') ?? '', pageUrl);
+        if (href === '' || href === pageUrl || visitedPages.has(href)) continue;
+        let target;
+        try { target = new URL(href); } catch { continue; }
+        if (target.origin !== root.origin) continue;
+        if (bookPath !== '' && !target.pathname.startsWith(bookPath)) continue;
+        candidates.push({ href, score });
+      }
+      candidates.sort((a, b) => b.score - a.score);
+      return candidates.length === 0 ? '' : candidates[0].href;
+    }
+
     async function fetchToc(source, bookUrl, signal) {
-      const page = await proxyFetch(bookUrl, signal);
-      const doc = parseHtml(page.text);
-      return probeToc(source.toc, doc, page.finalUrl);
+      const chapters = [];
+      const seenChapters = new Set();
+      const visitedPages = new Set();
+      let title = '';
+      let pageUrl = bookUrl;
+      for (let page = 0; page < 50; page += 1) {
+        visitedPages.add(pageUrl);
+        const response = await proxyFetch(pageUrl, signal);
+        const doc = parseHtml(response.text);
+        const parsed = probeToc(source.toc, doc, response.finalUrl);
+        if (title === '') title = parsed.title;
+        for (const chapter of parsed.chapters) {
+          if (seenChapters.has(chapter.url)) continue;
+          seenChapters.add(chapter.url);
+          chapters.push(chapter);
+        }
+        const nextPage = findNextTocPage(doc, response.finalUrl, bookUrl, visitedPages);
+        if (nextPage === '') break;
+        pageUrl = nextPage;
+      }
+      return { title, chapters };
+    }
+
+    function detectChapterPageCount(doc) {
+      const text = doc.body?.textContent ?? '';
+      const match = /第\s*[\(（]?\s*\d+\s*\/\s*(\d+)\s*[\)）]?\s*页/.exec(text);
+      if (match === null) return 1;
+      const total = Number(match[1]);
+      return Number.isInteger(total) && total > 1 ? Math.min(total, 12) : 1;
+    }
+
+    function stripPageMarker(text) {
+      return text
+        .replace(/第\s*[\(（]?\s*\d+\s*\/\s*\d+\s*[\)）]?\s*页/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
+    /** Map .../123.html to .../123_2.html (common multi-page chapter scheme). */
+    function pagedChapterUrl(chapterUrl, page) {
+      let url;
+      try { url = new URL(chapterUrl); } catch { return ''; }
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+      const numbered = /^(.*)_\d+(\.html?)$/i.exec(url.pathname);
+      if (numbered !== null) url.pathname = `${numbered[1]}_${page}${numbered[2]}`;
+      else if (/\.html?$/i.test(url.pathname)) url.pathname = url.pathname.replace(/(\.html?)$/i, `_${page}$1`);
+      else return '';
+      url.search = '';
+      url.hash = '';
+      return url.toString();
     }
 
     async function fetchOnlineContent(source, chapterUrl, signal) {
-      const page = await proxyFetch(chapterUrl, signal);
-      const doc = parseHtml(page.text);
-      return probeContent(source.content, doc);
+      const firstPage = await proxyFetch(chapterUrl, signal);
+      const firstDoc = parseHtml(firstPage.text);
+      const firstText = probeContent(source.content, firstDoc);
+      const total = detectChapterPageCount(firstDoc);
+      if (total <= 1) return firstText;
+      const heading = collapseText(firstDoc.querySelector('h1')?.textContent ?? '', 120);
+      const parts = [stripPageMarker(firstText)];
+      for (let page = 2; page <= total; page += 1) {
+        const pageUrl = pagedChapterUrl(chapterUrl, page);
+        if (pageUrl === '') break;
+        let response;
+        try {
+          response = await proxyFetch(pageUrl, signal);
+        } catch {
+          break;
+        }
+        const doc = parseHtml(response.text);
+        const pageHeading = collapseText(doc.querySelector('h1')?.textContent ?? '', 120);
+        if (heading !== '' && pageHeading !== '' && pageHeading !== heading) break;
+        const part = stripPageMarker(probeContent(source.content, doc));
+        if (part === '') break;
+        parts.push(part);
+      }
+      return parts.join('\n');
     }
 
     const localTocCache = new Map();
@@ -1283,7 +1407,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       if (value === '') return '';
       let next = value
         .replace(/%7B%7Bkeyword%7D%7D/gi, '{{keyword}}')
-        .replace(/\{\{\s*keyword\s*\}\}/gi, '{{keyword}}');
+        .replace(/%7Bkeyword%7D/gi, '{{keyword}}')
+        .replace(/\{{1,2}\s*keyword\s*\}{1,2}/gi, '{{keyword}}');
       if (!next.includes('{{keyword}}')) {
         const encoded = encodeURIComponent(keyword);
         if (encoded !== '' && next.includes(encoded)) next = next.split(encoded).join('{{keyword}}');
@@ -1454,10 +1579,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       }
 
       if (searchRule !== null) {
-        const template = normalizeSearchTemplate(
-          searchRule.url === '' ? searchUrl : (resolveTemplate(searchRule.url, baseUrl) || searchUrl),
-          keywordText,
-        );
+        // Prefer the URL that actually produced results; the model's suggestion
+        // is only a fallback (it sometimes loses a brace or rewrites the host).
+        const chosen = searchUrl !== '' ? searchUrl : (resolveTemplate(searchRule.url, baseUrl) || searchUrl);
+        const template = normalizeSearchTemplate(chosen, keywordText);
         searchRule = Object.assign({}, searchRule, { url: template });
         if (!template.includes('{{keyword}}')) {
           log.push('警告：搜索地址没有 {{keyword}} 占位符，搜索可能固定为测试关键词');
@@ -2650,6 +2775,11 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
             const source = store.get().settings.sources.find((entry) => entry.id === sourceId);
             if (source === undefined) throw new Error('书源不存在');
             return searchSource(source, keyword);
+          },
+          async readOnlineChapter(sourceId, chapterUrl) {
+            const source = store.get().settings.sources.find((entry) => entry.id === sourceId);
+            if (source === undefined) throw new Error('书源不存在');
+            return fetchOnlineContent(source, chapterUrl);
           },
           async addOnlineBook(sourceId, result) {
             const source = store.get().settings.sources.find((entry) => entry.id === sourceId);

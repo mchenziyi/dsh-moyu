@@ -357,7 +357,7 @@ const AI_STAGE_INSTRUCTIONS = {
   homepage: [
     '页面类型：站点首页。',
     '任务：识别书源名称、站点根地址、搜索 URL 模板，以及一个可以作为样书的书籍详情页链接。',
-    '搜索 URL 模板用 {{keyword}} 占位（不要对占位符做 URL 编码）；可从 GET 表单、搜索入口链接或常见路径推断（如 /search、/s、/so.php、/search.php）。',
+    '搜索 URL 模板必须用双层花括号的 {{keyword}} 占位（不要写成 {keyword}，也不要对占位符做 URL 编码）；可从 GET 表单、搜索入口链接或常见路径推断（如 /search、/s、/so.php、/search.php）。',
     '如果首页没有可用的搜索入口，searchUrl 返回空字符串；如果首页没有书籍链接，sampleBookUrl 返回空字符串。',
     '输出：{"name":"","baseUrl":"","searchUrl":"","sampleBookUrl":""}',
   ].join('\n'),

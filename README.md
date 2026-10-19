@@ -89,7 +89,8 @@ DSH 的摸鱼套件。第一个模块是**伪装成构建日志的小说阅读�
 - **选择器语法**：`selector@text`（默认，取文本）、`selector@html`、`selector@属性名`（如 `a@href`）；`@text` 可以单独使用，表示取条目自身的文本（例如 `toc.title: "@text"`）；相对地址自动按所在页面解析。
 - **多选择器回退**：字段可以用 `||` 分隔多个候选，例如 `#content || .content || .showtxt`，按顺序取第一个非空结果。
 - **正文换行**：正文提取会把 `<br>`、`<p>`、`<div>`、`<li>`、`<tr>` 转成换行，并强制移除 `script/style/noscript`。
-- **模板**：`{{keyword}}` 会被 URL 编码后替换；`{{base}}` 是 `baseUrl`。
+- **模板**：`{{keyword}}` 会被 URL 编码后替换；`{keyword}` 这种单层花括号也会被兼容；`{{base}}` 是 `baseUrl`。
+- **分页**：目录页的「下一页 / 数字页码」会自动跟随合并；章节正文的「第 (1/N) 页」或 `_2.html` 多页会自动拼接成完整一章。
 - **必填**：`id`/`name`、`toc.list`、`content.text`；搜索相关可选。
 - **编码**：Host 代理会自动识别 `Content-Type` 或 `<meta charset>`，GBK/GB2312 会按 GB18030 解码。
 - 只支持**静态 HTML**；需要 JS 渲染、登录、验证码的站点不在能力范围内。
