@@ -2954,7 +2954,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           ? tocChapters.map((chapter, index) => ({ chapter, index }))
             .filter((entry) => query === '' || String(entry.chapter.title).toLowerCase().includes(query))
           : [];
-        const shownToc = filteredToc.slice(0, 300);
+        const shownToc = filteredToc;
         const tocPanel = tocBookId !== book.id ? null : h('div', { className: 'my-shelf-toc' },
           h('div', { className: 'my-shelf-toc-head' },
             h('strong', null, `${t('shelf.toc')} · ${tocChapters.length}`),
@@ -2979,9 +2979,6 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                 h('span', { className: 'my-toc-name' }, entry.chapter.title))),
             tocLoading && tocChapters.length > 0
               ? h('div', { className: 'my-toc-empty' }, t('toc.progress', { count: tocChapters.length }))
-              : null,
-            filteredToc.length > shownToc.length
-              ? h('div', { className: 'my-toc-empty' }, t('shelf.tocMore', { shown: shownToc.length }))
               : null,
             !tocLoading && tocChapters.length === 0 && tocError === ''
               ? h('div', { className: 'my-toc-empty' }, t('toc.empty'))
