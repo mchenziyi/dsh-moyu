@@ -655,59 +655,96 @@ function stopGameTunnel() {
   tunnelPromise = undefined;
 }
 
-async function startGameTunnel() {
+function expandHome(value) {
+  if (value === '~') return homedir();
+  if (value.startsWith('~/')) return homedir() + value.slice(1);
+  return value;
+}
+
+async function startGameTunnel(options = {}) {
   if (gameServer === undefined) throw failure('bad-request', '请先创建房间');
   if (tunnelUrl !== '') return { url: tunnelUrl };
   if (tunnelPromise !== undefined) return tunnelPromise;
-  tunnelPromise = new Promise((resolve, reject) => {
-    const child = spawn('cloudflared', [
-      'tunnel',
-      '--url', `http://127.0.0.1:${gameServer.port}`,
-      '--no-autoupdate',
-    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const mode = options.mode === 'named' ? 'named' : 'quick';
+  const cloudflaredMissing = '未安装 cloudflared，可先执行 brew install cloudflared';
+
+  tunnelPromise = new Promise(async (resolve, reject) => {
+    let args;
+    let namedUrl = '';
+    if (mode === 'named') {
+      const configPath = expandHome(String(options.configPath ?? '~/.cloudflared/config.yml'));
+      let configText;
+      try {
+        configText = await readFile(configPath, 'utf8');
+      } catch {
+        reject(new Error(`找不到 cloudflared 配置：${configPath}`));
+        return;
+      }
+      let hostname = String(options.hostname ?? '').trim();
+      if (hostname === '') {
+        const match = /hostname:\s*([^\s#]+)/.exec(configText);
+        if (match !== null) hostname = match[1].trim();
+      }
+      if (hostname === '') {
+        reject(new Error('命名隧道需要填写公网域名，或在 cloudflared 配置里设置 hostname'));
+        return;
+      }
+      namedUrl = /^https?:\/\//i.test(hostname) ? hostname.replace(/\/+$/, '') : `https://${hostname}`;
+      args = ['tunnel', '--config', configPath, 'run'];
+      if (String(options.tunnelName ?? '').trim() !== '') args.push(String(options.tunnelName).trim());
+    } else {
+      args = ['tunnel', '--url', `http://127.0.0.1:${gameServer.port}`, '--no-autoupdate'];
+    }
+
+    const child = spawn('cloudflared', args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '';
     let settled = false;
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      try { child.kill('SIGTERM'); } catch { /* gone */ }
-      tunnelProcess = undefined;
-      reject(new Error('cloudflared 启动超时'));
-    }, 25000);
+    let readyTimer;
+    const cleanup = () => {
+      if (readyTimer !== undefined) clearTimeout(readyTimer);
+    };
     const finish = (url) => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      cleanup();
       tunnelUrl = url;
       tunnelProcess = child;
-      resolve({ url });
+      resolve({ url, mode });
+    };
+    const fail = (message) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      try { child.kill('SIGTERM'); } catch { /* gone */ }
+      tunnelProcess = undefined;
+      tunnelUrl = '';
+      reject(new Error(message));
     };
     const onData = (chunk) => {
       output += String(chunk);
-      const match = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i.exec(output);
-      if (match !== null) finish(match[0]);
+      if (mode === 'quick') {
+        const match = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i.exec(output);
+        if (match !== null) finish(match[0]);
+      } else if (/Registered tunnel connection|Connection .*registered|INF Registered/i.test(output)) {
+        finish(namedUrl);
+      }
     };
     child.stdout?.on('data', onData);
     child.stderr?.on('data', onData);
     child.on('error', (error) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      tunnelProcess = undefined;
-      const message = error?.code === 'ENOENT'
-        ? '未安装 cloudflared，可先执行 brew install cloudflared'
-        : String(error?.message ?? error);
-      reject(new Error(message));
+      fail(error?.code === 'ENOENT' ? cloudflaredMissing : String(error?.message ?? error));
     });
     child.on('exit', (code) => {
       tunnelProcess = undefined;
       tunnelUrl = '';
-      if (!settled) {
-        settled = true;
-        clearTimeout(timer);
-        reject(new Error(`cloudflared 退出（${code}）`));
-      }
+      if (!settled) fail(`cloudflared 退出（${code}）`);
     });
+    if (mode === 'named') {
+      readyTimer = setTimeout(() => finish(namedUrl), 8000);
+    }
+    setTimeout(() => {
+      if (!settled) fail('cloudflared 启动超时');
+    }, 25000).unref?.();
   }).finally(() => {
     tunnelPromise = undefined;
   });
@@ -717,7 +754,12 @@ async function startGameTunnel() {
 async function gameTunnelHandler(ctx, url, body) {
   const action = typeof body.action === 'string' ? body.action : 'status';
   if (action === 'start') {
-    const result = await startGameTunnel();
+    const result = await startGameTunnel({
+      mode: body.mode,
+      hostname: body.hostname,
+      configPath: body.configPath,
+      tunnelName: body.tunnelName,
+    });
     return { running: true, url: result.url };
   }
   if (action === 'stop') {

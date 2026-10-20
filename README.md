@@ -58,7 +58,11 @@ DSH 的摸鱼套件。第一个模块是**伪装成构建日志的小说阅读�
 
 - **创建房间**：房主点一下「创建房间」即可，插件会在本机端口（默认 `17890`）起服务，并生成一个 **邀请码**（形如 `MZJ1-...`）。
 - **加入房间**：朋友把邀请码发给你，粘贴到一个输入框里点「加入」即可；不需要手动填 IP、端口和房间号。同一 Wi-Fi 下不用公网地址。
-- **公网联机**：需要朋友不在同一 Wi-Fi 时，点「一键公网隧道」（需要本机已安装 `cloudflared`，`brew install cloudflared`）；插件会启动临时隧道并生成公网地址。也可以自己用 ngrok/frp，把地址填到高级设置里。
+- **公网联机**：需要朋友不在同一 Wi-Fi 时，点「一键公网隧道」（需要本机已安装 `cloudflared`，`brew install cloudflared`）。支持两种模式：
+  - **快速隧道**：随机 `trycloudflare.com` 地址，无需域名；
+  - **命名隧道**：使用你已有的 Cloudflare 域名和 `~/.cloudflared/config.yml`，插件直接 `cloudflared tunnel --config ... run`，给朋友一个稳定的 `https://你的域名`。
+
+  命名隧道需要先做一次：`cloudflared tunnel login`、`cloudflared tunnel create moyu-game`、`cloudflared tunnel route dns moyu-game game.example.com`，并让配置里的 ingress 指向本机游戏端口（默认 `17890`）。
 - **极简隐藏模式**：`Cmd/Ctrl + Shift + G` 呼出/隐藏一个很窄的等宽牌桌浮窗；老板键 `Cmd/Ctrl + Shift + M` 会立即隐藏，不写会话日志、不落盘牌局。
 - **规则**：2–6 人、闷牌/看牌、跟注/加注/弃牌/比牌；服务端权威，未看牌前不会把牌发给客户端。
 - **仅筹码/积分**，不涉及真钱、支付或兑换。

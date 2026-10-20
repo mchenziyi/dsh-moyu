@@ -122,6 +122,14 @@ window.__ModuleLoader__.load({
       'game.tunnelStarting': '正在开启隧道…',
       'game.tunnelReady': '公网地址已就绪：{url}',
       'game.tunnelFailed': '隧道启动失败：{message}',
+      'game.cloudflare': 'Cloudflare 隧道',
+      'game.tunnelQuick': '快速隧道（随机 trycloudflare 地址）',
+      'game.tunnelNamed': '命名隧道（使用你的域名/配置）',
+      'game.tunnelHostname': '公网域名',
+      'game.tunnelConfigPath': 'cloudflared 配置路径',
+      'game.tunnelName': '隧道名称（可选）',
+      'game.tunnelQuickHint': '需要先安装 cloudflared：brew install cloudflared',
+      'game.tunnelNamedHint': '先完成 cloudflared tunnel login / create / route dns；配置里的 ingress 要指向本机游戏端口。',
       'settings.subtitle': '摸鱼套件：小说只是第一个模块',
       'settings.bookshelf': '书架',
       'settings.importPath': 'TXT 文件绝对路径，例如 ~/novels/book.txt',
@@ -454,6 +462,14 @@ window.__ModuleLoader__.load({
       'game.tunnelStarting': 'Starting tunnel…',
       'game.tunnelReady': 'Public address ready: {url}',
       'game.tunnelFailed': 'Tunnel failed: {message}',
+      'game.cloudflare': 'Cloudflare tunnel',
+      'game.tunnelQuick': 'Quick tunnel (random trycloudflare URL)',
+      'game.tunnelNamed': 'Named tunnel (your domain/config)',
+      'game.tunnelHostname': 'Public hostname',
+      'game.tunnelConfigPath': 'cloudflared config path',
+      'game.tunnelName': 'Tunnel name (optional)',
+      'game.tunnelQuickHint': 'Install cloudflared first: brew install cloudflared',
+      'game.tunnelNamedHint': 'Run cloudflared tunnel login / create / route dns first; the config ingress must point to the local game port.',
       'settings.subtitle': 'A slack-off suite; novels are only the first module',
       'settings.bookshelf': 'Bookshelf',
       'settings.importPath': 'Absolute path to a TXT file, e.g. ~/novels/book.txt',
@@ -901,6 +917,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       playerName: '摸鱼工',
       serverPort: 17890,
       publicUrl: '',
+      tunnelMode: 'quick',
+      tunnelHostname: '',
+      tunnelConfigPath: '~/.cloudflared/config.yml',
+      tunnelName: '',
       session: null,
       snapshot: null,
       connection: 'idle',
@@ -918,6 +938,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           playerName: current.playerName,
           serverPort: current.serverPort,
           publicUrl: current.publicUrl,
+          tunnelMode: current.tunnelMode,
+          tunnelHostname: current.tunnelHostname,
+          tunnelConfigPath: current.tunnelConfigPath,
+          tunnelName: current.tunnelName,
         }));
       } catch {
         /* storage is optional */
@@ -1126,8 +1150,14 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       ].join('\n');
     }
 
-    async function startGameTunnel() {
-      const data = await postJson('moyu/game/tunnel', { action: 'start' });
+    async function startGameTunnel(options = {}) {
+      const data = await postJson('moyu/game/tunnel', {
+        action: 'start',
+        mode: options.mode,
+        hostname: options.hostname,
+        configPath: options.configPath,
+        tunnelName: options.tunnelName,
+      });
       if (typeof data?.url === 'string' && data.url !== '') setGamePrefs({ publicUrl: data.url });
       return data;
     }
@@ -3324,7 +3354,12 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setTunnelBusy(true);
         setNotice('');
         try {
-          const data = await startGameTunnel();
+          const data = await startGameTunnel({
+            mode: game.tunnelMode,
+            hostname: game.tunnelHostname,
+            configPath: game.tunnelConfigPath,
+            tunnelName: game.tunnelName,
+          });
           setNotice(t('game.tunnelReady', { url: data.url }));
         } catch (failure) {
           setNotice(t('game.tunnelFailed', { message: String(failure?.message ?? failure) }));
@@ -3385,6 +3420,42 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                   className: 'my-btn',
                   onClick: () => join(`${manualAddress} ${room.roomCode}`),
                 }, t('game.joinRoom'))))),
+          h('div', { className: 'my-form-label' }, t('game.cloudflare')),
+          h('div', { className: 'my-row' },
+            h('select', {
+              className: 'my-select',
+              value: game.tunnelMode,
+              onChange: (event) => setGamePrefs({ tunnelMode: event.currentTarget.value }),
+            },
+              h('option', { value: 'quick' }, t('game.tunnelQuick')),
+              h('option', { value: 'named' }, t('game.tunnelNamed')))),
+          game.tunnelMode === 'named'
+            ? h(React.Fragment, null,
+              h('div', { className: 'my-field' },
+                h('span', { className: 'my-field-label' }, t('game.tunnelHostname')),
+                h('input', {
+                  className: 'my-field-input',
+                  value: game.tunnelHostname,
+                  placeholder: 'game.example.com',
+                  onChange: (event) => setGamePrefs({ tunnelHostname: event.currentTarget.value }),
+                })),
+              h('div', { className: 'my-field' },
+                h('span', { className: 'my-field-label' }, t('game.tunnelConfigPath')),
+                h('input', {
+                  className: 'my-field-input',
+                  value: game.tunnelConfigPath,
+                  onChange: (event) => setGamePrefs({ tunnelConfigPath: event.currentTarget.value }),
+                })),
+              h('div', { className: 'my-field' },
+                h('span', { className: 'my-field-label' }, t('game.tunnelName')),
+                h('input', {
+                  className: 'my-field-input',
+                  value: game.tunnelName,
+                  placeholder: 'moyu-game',
+                  onChange: (event) => setGamePrefs({ tunnelName: event.currentTarget.value }),
+                })),
+              h('div', { className: 'my-sub' }, t('game.tunnelNamedHint')))
+            : h('div', { className: 'my-sub' }, t('game.tunnelQuickHint')),
           h('div', { className: 'my-field' },
             h('span', { className: 'my-field-label' }, t('game.publicUrl')),
             h('input', {
