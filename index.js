@@ -13,6 +13,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, extname, isAbsolute } from 'node:path';
 import { createGameServer } from './game/server.js';
+import { spawn } from 'node:child_process';
 
 export const name = 'moyu';
 
@@ -625,6 +626,10 @@ async function aiHandler(ctx, url, body) {
 
 let gameServer;
 let gameServerPromise;
+let tunnelProcess;
+let tunnelUrl = '';
+let tunnelPromise;
+
 
 async function ensureGameServer(port) {
   if (gameServer !== undefined) return gameServer;
@@ -639,6 +644,87 @@ async function ensureGameServer(port) {
     gameServerPromise = undefined;
   });
   return gameServerPromise;
+}
+
+function stopGameTunnel() {
+  if (tunnelProcess !== undefined) {
+    try { tunnelProcess.kill('SIGTERM'); } catch { /* already gone */ }
+    tunnelProcess = undefined;
+  }
+  tunnelUrl = '';
+  tunnelPromise = undefined;
+}
+
+async function startGameTunnel() {
+  if (gameServer === undefined) throw failure('bad-request', '请先创建房间');
+  if (tunnelUrl !== '') return { url: tunnelUrl };
+  if (tunnelPromise !== undefined) return tunnelPromise;
+  tunnelPromise = new Promise((resolve, reject) => {
+    const child = spawn('cloudflared', [
+      'tunnel',
+      '--url', `http://127.0.0.1:${gameServer.port}`,
+      '--no-autoupdate',
+    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let output = '';
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try { child.kill('SIGTERM'); } catch { /* gone */ }
+      tunnelProcess = undefined;
+      reject(new Error('cloudflared 启动超时'));
+    }, 25000);
+    const finish = (url) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      tunnelUrl = url;
+      tunnelProcess = child;
+      resolve({ url });
+    };
+    const onData = (chunk) => {
+      output += String(chunk);
+      const match = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i.exec(output);
+      if (match !== null) finish(match[0]);
+    };
+    child.stdout?.on('data', onData);
+    child.stderr?.on('data', onData);
+    child.on('error', (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      tunnelProcess = undefined;
+      const message = error?.code === 'ENOENT'
+        ? '未安装 cloudflared，可先执行 brew install cloudflared'
+        : String(error?.message ?? error);
+      reject(new Error(message));
+    });
+    child.on('exit', (code) => {
+      tunnelProcess = undefined;
+      tunnelUrl = '';
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        reject(new Error(`cloudflared 退出（${code}）`));
+      }
+    });
+  }).finally(() => {
+    tunnelPromise = undefined;
+  });
+  return tunnelPromise;
+}
+
+async function gameTunnelHandler(ctx, url, body) {
+  const action = typeof body.action === 'string' ? body.action : 'status';
+  if (action === 'start') {
+    const result = await startGameTunnel();
+    return { running: true, url: result.url };
+  }
+  if (action === 'stop') {
+    stopGameTunnel();
+    return { running: false };
+  }
+  return { running: tunnelUrl !== '', url: tunnelUrl };
 }
 
 async function gameCreateHandler(ctx, url, body) {
@@ -670,6 +756,7 @@ async function gameStopHandler(ctx) {
 
 export function apply(ctx) {
   ctx.effect(() => () => {
+    stopGameTunnel();
     if (gameServer !== undefined) {
       const server = gameServer;
       gameServer = undefined;
@@ -679,6 +766,7 @@ export function apply(ctx) {
   route(ctx, '/game/create', gameCreateHandler, ['POST']);
   route(ctx, '/game/status', gameStatusHandler);
   route(ctx, '/game/stop', gameStopHandler, ['POST']);
+  route(ctx, '/game/tunnel', gameTunnelHandler, ['POST']);
 
   route(ctx, '/local/toc', tocHandler);
   route(ctx, '/local/chapter', chapterHandler);

@@ -81,10 +81,24 @@ export function lanAddresses(port) {
   for (const entries of Object.values(interfaces)) {
     for (const entry of entries ?? []) {
       if (entry.family !== 'IPv4' || entry.internal) continue;
-      result.push(`http://${entry.address}:${port}`);
+      const address = entry.address;
+      let score = 1;
+      if (/^192\.168\./.test(address)) score = 4;
+      else if (/^10\./.test(address)) score = 3;
+      else if (/^172\.(1[6-9]|2\d|3[01])\./.test(address)) score = 2;
+      else if (/^100\.(6[4-9]|[7-9]\d|1[01]\d)\./.test(address)) score = 0;
+      result.push({ url: `http://${address}:${port}`, score });
     }
   }
-  return [...new Set(result)];
+  const seen = new Set();
+  return result
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => entry.url)
+    .filter((url) => {
+      if (seen.has(url)) return false;
+      seen.add(url);
+      return true;
+    });
 }
 
 function fire(base, info) {

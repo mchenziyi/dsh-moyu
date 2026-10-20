@@ -108,6 +108,20 @@ window.__ModuleLoader__.load({
       'game.overlayHint': '游戏未连接：打开 设置 → 游戏 创建或加入房间',
       'game.error': '错误：{message}',
       'game.tunnelCmd': '隧道命令：cloudflared tunnel --url http://localhost:{port}',
+      'game.localOnly': '同一 Wi-Fi 下直接创建房间即可，不需要公网地址。',
+      'game.shareHint': '朋友把邀请码发给你，粘贴到上面点「加入」就能进房间。',
+      'game.joinPlaceholder': '粘贴邀请码，或「地址 房间号」',
+      'game.joinFormat': '邀请码/地址格式不对',
+      'game.shareTitle': '邀请朋友',
+      'game.copyInvite': '复制邀请',
+      'game.inviteCopied': '邀请码已复制',
+      'game.advanced': '高级设置（玩家名 / 端口 / 手动加入）',
+      'game.advancedHide': '收起高级设置',
+      'game.manualJoin': '手动加入',
+      'game.oneClickTunnel': '一键公网隧道',
+      'game.tunnelStarting': '正在开启隧道…',
+      'game.tunnelReady': '公网地址已就绪：{url}',
+      'game.tunnelFailed': '隧道启动失败：{message}',
       'settings.subtitle': '摸鱼套件：小说只是第一个模块',
       'settings.bookshelf': '书架',
       'settings.importPath': 'TXT 文件绝对路径，例如 ~/novels/book.txt',
@@ -426,6 +440,20 @@ window.__ModuleLoader__.load({
       'game.overlayHint': 'Not in a game: open Settings → Game to create or join a room',
       'game.error': 'Error: {message}',
       'game.tunnelCmd': 'Tunnel: cloudflared tunnel --url http://localhost:{port}',
+      'game.localOnly': 'On the same Wi-Fi, just create a room; no public address is needed.',
+      'game.shareHint': 'Send the invite code to a friend; they paste it above and press Join.',
+      'game.joinPlaceholder': 'Paste an invite code, or “address room-code”',
+      'game.joinFormat': 'Invalid invite code or address',
+      'game.shareTitle': 'Invite a friend',
+      'game.copyInvite': 'Copy invite',
+      'game.inviteCopied': 'Invite copied',
+      'game.advanced': 'Advanced (name / port / manual join)',
+      'game.advancedHide': 'Hide advanced settings',
+      'game.manualJoin': 'Manual join',
+      'game.oneClickTunnel': 'One-click public tunnel',
+      'game.tunnelStarting': 'Starting tunnel…',
+      'game.tunnelReady': 'Public address ready: {url}',
+      'game.tunnelFailed': 'Tunnel failed: {message}',
       'settings.subtitle': 'A slack-off suite; novels are only the first module',
       'settings.bookshelf': 'Bookshelf',
       'settings.importPath': 'Absolute path to a TXT file, e.g. ~/novels/book.txt',
@@ -759,6 +787,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 .my-game-actions{display:flex;gap:4px;flex-wrap:wrap}
 .my-game-log{max-height:90px;overflow:auto;color:var(--dsw-alias-label-secondary);font-size:11px;white-space:pre-wrap}
 .my-game-result{color:var(--dsw-alias-state-success-primary);font-weight:600}
+.my-game-share{display:flex;flex-direction:column;gap:6px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:8px 10px;background:var(--dsw-alias-bg-base)}
+.my-game-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;word-break:break-all;color:var(--dsw-alias-label-primary);user-select:all}
 .my-error{color:var(--dsw-alias-state-error-primary);font-size:12px}
 .my-detail{border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--dsw-alias-bg-base)}
 .my-detail-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -1032,6 +1062,81 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         gameStore.set({ rooms: data.rooms ?? [], lobbyAddress: baseUrl, error: '' });
       } catch (failure) {
         gameStore.set({ rooms: [], lobbyAddress: baseUrl, error: String(failure?.message ?? failure) });
+      }
+    }
+
+    function encodeBase64Url(text) {
+      const bytes = new TextEncoder().encode(text);
+      let binary = '';
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
+
+    function decodeBase64Url(value) {
+      const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (value.length % 4)) % 4);
+      const binary = atob(padded);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      return new TextDecoder().decode(bytes);
+    }
+
+    function gameInviteCode(session, address) {
+      if (session === null || session === undefined) return '';
+      const target = normalizeGameBase(address || session.share?.lanUrls?.[0] || session.baseUrl);
+      try {
+        return `MZJ1-${encodeBase64Url(JSON.stringify({ a: target, r: session.roomCode }))}`;
+      } catch {
+        return '';
+      }
+    }
+
+    function parseGameInvite(value) {
+      const text = String(value ?? '').trim();
+      if (text === '') return null;
+      const codeMatch = /^MZJ1-([A-Za-z0-9_-]+)$/.exec(text);
+      if (codeMatch !== null) {
+        try {
+          const data = JSON.parse(decodeBase64Url(codeMatch[1]));
+          if (typeof data.a === 'string' && typeof data.r === 'string') {
+            return { address: normalizeGameBase(data.a), roomCode: data.r.toUpperCase() };
+          }
+        } catch {
+          return null;
+        }
+      }
+      const urlMatch = /https?:\/\/[^\s]+/.exec(text);
+      const roomMatch = /\b([A-Z2-9]{6})\b/.exec(text.toUpperCase());
+      if (urlMatch !== null && roomMatch !== null) {
+        return {
+          address: normalizeGameBase(urlMatch[0].replace(/[.,;)]+$/, '')),
+          roomCode: roomMatch[1],
+        };
+      }
+      return null;
+    }
+
+    function gameInviteText(session, address) {
+      if (session === null || session === undefined) return '';
+      const target = normalizeGameBase(address || session.share?.lanUrls?.[0] || session.baseUrl);
+      return [
+        '摸鱼炸金花',
+        `邀请码：${gameInviteCode(session, target)}`,
+        `地址：${target}`,
+        `房间号：${session.roomCode}`,
+      ].join('\n');
+    }
+
+    async function startGameTunnel() {
+      const data = await postJson('moyu/game/tunnel', { action: 'start' });
+      if (typeof data?.url === 'string' && data.url !== '') setGamePrefs({ publicUrl: data.url });
+      return data;
+    }
+
+    async function stopGameTunnel() {
+      try {
+        await postJson('moyu/game/tunnel', { action: 'stop' });
+      } catch {
+        /* best effort */
       }
     }
 
@@ -3145,105 +3250,201 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 
     function GameCard({ t }) {
       const game = useStore(gameStore);
-      const [address, setAddress] = React.useState(game.lobbyAddress || `http://127.0.0.1:${game.serverPort}`);
-      const [roomCode, setRoomCode] = React.useState('');
+      const [joinText, setJoinText] = React.useState('');
       const [busy, setBusy] = React.useState(false);
+      const [showAdvanced, setShowAdvanced] = React.useState(false);
+      const [tunnelBusy, setTunnelBusy] = React.useState(false);
+      const [notice, setNotice] = React.useState('');
+      const [manualAddress, setManualAddress] = React.useState(`http://127.0.0.1:${game.serverPort}`);
+      const [manualCode, setManualCode] = React.useState('');
+
+      const session = game.session;
+      const publicUrl = String(game.publicUrl ?? '').trim();
+      const lanUrl = session?.share?.lanUrls?.[0] ?? session?.baseUrl ?? '';
+      const shareAddress = publicUrl !== '' ? publicUrl : lanUrl;
+      const inviteCode = session === null || session === undefined ? '' : gameInviteCode(session, shareAddress);
+      const inviteText = session === null || session === undefined ? '' : gameInviteText(session, shareAddress);
 
       async function create() {
         if (busy) return;
         setBusy(true);
-        try { await createGameRoom(); } catch { /* store carries the error */ } finally { setBusy(false); }
+        setNotice('');
+        try {
+          await createGameRoom();
+          setNotice('');
+        } catch (failure) {
+          gameStore.set({ error: String(failure?.message ?? failure) });
+        } finally {
+          setBusy(false);
+        }
       }
 
-      async function join(code) {
+      async function join(value) {
         if (busy) return;
+        setNotice('');
+        const parsed = parseGameInvite(value);
+        if (parsed === null) {
+          gameStore.set({ error: t('game.joinFormat') });
+          return;
+        }
         setBusy(true);
-        try { await joinGameRoom(address, code, game.playerName); } catch (failure) { gameStore.set({ error: String(failure?.message ?? failure) }); } finally { setBusy(false); }
+        try {
+          await joinGameRoom(parsed.address, parsed.roomCode, game.playerName);
+        } catch (failure) {
+          gameStore.set({ error: String(failure?.message ?? failure) });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function joinManual() {
+        if (busy) return;
+        const address = normalizeGameBase(manualAddress);
+        const code = manualCode.trim().toUpperCase();
+        if (address === '' || code === '') {
+          gameStore.set({ error: t('game.joinFormat') });
+          return;
+        }
+        setBusy(true);
+        try {
+          await joinGameRoom(address, code, game.playerName);
+        } catch (failure) {
+          gameStore.set({ error: String(failure?.message ?? failure) });
+        } finally {
+          setBusy(false);
+        }
       }
 
       async function refresh() {
-        await loadGameRooms(address);
+        await loadGameRooms(normalizeGameBase(manualAddress));
       }
 
-      const session = game.session;
-      const share = session?.share;
-      const lanUrl = share?.lanUrls?.[0] ?? '';
-      const publicUrl = String(game.publicUrl ?? '').trim();
+      async function tunnel() {
+        if (tunnelBusy) return;
+        setTunnelBusy(true);
+        setNotice('');
+        try {
+          const data = await startGameTunnel();
+          setNotice(t('game.tunnelReady', { url: data.url }));
+        } catch (failure) {
+          setNotice(t('game.tunnelFailed', { message: String(failure?.message ?? failure) }));
+        } finally {
+          setTunnelBusy(false);
+        }
+      }
+
+      const advanced = showAdvanced
+        ? h('div', { className: 'my-form-section' },
+          h('div', { className: 'my-form-grid' },
+            h('div', { className: 'my-field' },
+              h('span', { className: 'my-field-label' }, t('game.playerName')),
+              h('input', {
+                className: 'my-field-input',
+                value: game.playerName,
+                onChange: (event) => setGamePrefs({ playerName: event.currentTarget.value }),
+              })),
+            h('div', { className: 'my-field' },
+              h('span', { className: 'my-field-label' }, t('game.port')),
+              h('input', {
+                className: 'my-field-input',
+                type: 'number',
+                value: game.serverPort,
+                onChange: (event) => setGamePrefs({ serverPort: Math.max(1024, Number(event.currentTarget.value) || 17890) }),
+              }))),
+          h('div', { className: 'my-form-label' }, t('game.manualJoin')),
+          h('div', { className: 'my-row' },
+            h('input', {
+              className: 'my-input-path',
+              value: manualAddress,
+              placeholder: t('game.address'),
+              onChange: (event) => setManualAddress(event.currentTarget.value),
+            }),
+            h('input', {
+              className: 'my-input-path',
+              style: { maxWidth: '120px' },
+              value: manualCode,
+              placeholder: t('game.roomCode'),
+              onChange: (event) => setManualCode(event.currentTarget.value.toUpperCase()),
+            }),
+            h('button', { className: 'my-btn', disabled: busy, onClick: joinManual }, t('game.join'))),
+          h('div', { className: 'my-row' },
+            h('button', { className: 'my-btn', onClick: refresh }, t('game.refresh')),
+            h('button', { className: 'my-btn', disabled: tunnelBusy, onClick: tunnel },
+              tunnelBusy ? t('game.tunnelStarting') : t('game.oneClickTunnel'))),
+          h('div', { className: 'my-sub' }, t('game.tunnelCmd', { port: game.serverPort })),
+          h('div', { className: 'my-form-label' }, t('game.rooms')),
+          game.rooms === null
+            ? null
+            : (game.rooms.length === 0
+              ? h('div', { className: 'my-sub' }, t('game.noRooms'))
+              : game.rooms.map((room) => h('div', { key: room.roomCode, className: 'my-book' },
+                h('div', { className: 'my-book-main' },
+                  h('div', { className: 'my-book-title' }, `${room.roomCode} · ${room.players}/${room.maxPlayers}`),
+                  h('div', { className: 'my-book-meta' }, `${t('game.waiting')} · ${t('game.bet')} ${room.ante}`)),
+                h('button', {
+                  className: 'my-btn',
+                  onClick: () => join(`${manualAddress} ${room.roomCode}`),
+                }, t('game.joinRoom'))))),
+          h('div', { className: 'my-field' },
+            h('span', { className: 'my-field-label' }, t('game.publicUrl')),
+            h('input', {
+              className: 'my-field-input',
+              value: game.publicUrl,
+              placeholder: 'https://xxxx.trycloudflare.com',
+              onChange: (event) => setGamePrefs({ publicUrl: event.currentTarget.value }),
+            })),
+          h('div', { className: 'my-sub' }, t('game.publicHint')))
+        : null;
+
+      if (session !== null && session !== undefined) {
+        return h('div', { className: 'my-card' },
+          h('h3', null, t('game.title')),
+          h('div', { className: 'my-game-share' },
+            h('div', { className: 'my-form-label' }, t('game.shareTitle')),
+            h('div', { className: 'my-game-code' }, inviteCode),
+            h('div', { className: 'my-sub' }, `${t('game.address')}：${shareAddress} · ${t('game.roomCode')}：${session.roomCode}`),
+            h('div', { className: 'my-row' },
+              h('button', {
+                className: 'my-btn primary',
+                onClick: () => { copyText(inviteText); setNotice(t('game.inviteCopied')); },
+              }, t('game.copyInvite')),
+              session.local === false ? null : h('button', { className: 'my-btn', disabled: tunnelBusy, onClick: tunnel },
+                tunnelBusy ? t('game.tunnelStarting') : t('game.oneClickTunnel')),
+              h('button', { className: 'my-btn', onClick: () => { void leaveGameRoom(); } }, t('game.leave')))),
+          notice === '' ? null : h('div', { className: 'my-sub' }, notice),
+          h(GamePanel, { t }),
+          h('button', {
+            className: 'my-btn',
+            onClick: () => setShowAdvanced((value) => !value),
+          }, showAdvanced ? t('game.advancedHide') : t('game.advanced')),
+          advanced,
+          game.error === '' ? null : h('div', { className: 'my-error' }, game.error));
+      }
 
       return h('div', { className: 'my-card' },
         h('h3', null, t('game.title')),
-        h('div', { className: 'my-sub' }, t('game.hint')),
-        h('div', { className: 'my-form-grid' },
-          h('div', { className: 'my-field' },
-            h('span', { className: 'my-field-label' }, t('game.playerName')),
-            h('input', {
-              className: 'my-field-input',
-              value: game.playerName,
-              onChange: (event) => setGamePrefs({ playerName: event.currentTarget.value }),
-            })),
-          h('div', { className: 'my-field' },
-            h('span', { className: 'my-field-label' }, t('game.port')),
-            h('input', {
-              className: 'my-field-input',
-              type: 'number',
-              value: game.serverPort,
-              onChange: (event) => setGamePrefs({ serverPort: Math.max(1024, Number(event.currentTarget.value) || 17890) }),
-            }))),
-        h('div', { className: 'my-field' },
-          h('span', { className: 'my-field-label' }, t('game.publicUrl')),
+        h('div', { className: 'my-sub' }, t('game.localOnly')),
+        h('div', { className: 'my-row' },
+          h('button', { className: 'my-btn primary', disabled: busy, onClick: create },
+            busy ? t('game.creating') : t('game.create')),
           h('input', {
-            className: 'my-field-input',
-            value: game.publicUrl,
-            placeholder: 'https://xxxx.trycloudflare.com',
-            onChange: (event) => setGamePrefs({ publicUrl: event.currentTarget.value }),
-          })),
-        h('div', { className: 'my-sub' }, t('game.publicHint')),
-        h('div', { className: 'my-sub' }, t('game.tunnelCmd', { port: game.serverPort })),
-
-        session === null || session === undefined
-          ? h(React.Fragment, null,
-            h('div', { className: 'my-row' },
-              h('button', { className: 'my-btn primary', disabled: busy, onClick: create },
-                busy ? t('game.creating') : t('game.create')),
-              h('button', { className: 'my-btn', onClick: refresh }, t('game.refresh'))),
-            h('div', { className: 'my-row' },
-              h('input', {
-                className: 'my-input-path',
-                value: address,
-                placeholder: t('game.address'),
-                onChange: (event) => setAddress(event.currentTarget.value),
-              }),
-              h('input', {
-                className: 'my-input-path',
-                style: { maxWidth: '120px' },
-                value: roomCode,
-                placeholder: t('game.roomCode'),
-                onChange: (event) => setRoomCode(event.currentTarget.value.toUpperCase()),
-              }),
-              h('button', { className: 'my-btn', disabled: busy, onClick: () => join(roomCode) },
-                busy ? t('game.joining') : t('game.join'))),
-            h('div', { className: 'my-form-label' }, t('game.rooms')),
-            game.rooms === null
-              ? null
-              : (game.rooms.length === 0
-                ? h('div', { className: 'my-sub' }, t('game.noRooms'))
-                : game.rooms.map((room) => h('div', { key: room.roomCode, className: 'my-book' },
-                  h('div', { className: 'my-book-main' },
-                    h('div', { className: 'my-book-title' }, `${room.roomCode} · ${room.players}/${room.maxPlayers}`),
-                    h('div', { className: 'my-book-meta' }, `${t('game.waiting')} · ${t('game.bet')} ${room.ante}`)),
-                  h('button', { className: 'my-btn', onClick: () => join(room.roomCode) }, t('game.joinRoom'))))))
-          : h(React.Fragment, null,
-            h(GamePanel, { t }),
-            h('div', { className: 'my-row' },
-              h('button', { className: 'my-btn', onClick: () => { void leaveGameRoom(); } }, t('game.leave')),
-              share === undefined ? null : h('span', { className: 'my-sub' },
-                `${t('game.share', { code: session.roomCode, url: lanUrl || session.baseUrl })}${publicUrl === '' ? '' : ` · ${t('game.publicShare', { code: session.roomCode, url: publicUrl })}`}`))),
+            className: 'my-input-path',
+            value: joinText,
+            placeholder: t('game.joinPlaceholder'),
+            onChange: (event) => setJoinText(event.currentTarget.value),
+            onKeyDown: (event) => { if (event.key === 'Enter') join(joinText); },
+          }),
+          h('button', { className: 'my-btn', disabled: busy, onClick: () => join(joinText) },
+            busy ? t('game.joining') : t('game.join'))),
+        h('div', { className: 'my-sub' }, t('game.shareHint')),
+        h('button', {
+          className: 'my-btn',
+          onClick: () => setShowAdvanced((value) => !value),
+        }, showAdvanced ? t('game.advancedHide') : t('game.advanced')),
+        advanced,
+        notice === '' ? null : h('div', { className: 'my-sub' }, notice),
         game.error === '' ? null : h('div', { className: 'my-error' }, game.error));
     }
-
-    // ------------------------------------------------------------------
-    // settings section
-    // ------------------------------------------------------------------
 
     function SourcesCard({ snap, t, onSearch }) {
       const [form, setForm] = React.useState(emptySourceForm);
