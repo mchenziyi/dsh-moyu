@@ -366,6 +366,41 @@ export class ZhaJinHuaGame {
     if (player !== undefined) player.online = online !== false;
   }
 
+  /** Serializable snapshot for Durable Object persistence. */
+  toJSON() {
+    return {
+      config: this.config,
+      players: this.players.map((player) => ({
+        seat: player.seat,
+        name: player.name,
+        chips: player.chips,
+        hand: player.hand.map((card) => ({ suit: card.suit, rank: card.rank })),
+        seen: player.seen,
+        folded: player.folded,
+        inHand: player.inHand,
+        acted: player.acted,
+        online: player.online,
+      })),
+      handNo: this.handNo,
+      status: this.status,
+      pot: this.pot,
+      currentBet: this.currentBet,
+      round: this.round,
+      turnSeat: this.turnSeat,
+      log: this.log.slice(),
+      winnerSeats: this.winnerSeats.slice(),
+      result: this.result,
+      dealerSeat: this.dealerSeat,
+    };
+  }
+
+  static fromJSON(data, random = Math.random) {
+    const game = Object.create(ZhaJinHuaGame.prototype);
+    Object.assign(game, data);
+    game.random = random;
+    return game;
+  }
+
   /** One viewer's snapshot. Other players' cards are never included. */
   stateFor(seat) {
     const viewer = this.players[seat];

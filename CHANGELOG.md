@@ -1,5 +1,13 @@
 # 变更记录
 
+## 0.11.0 — 2026-10-20
+
+- 新增 **Cloudflare 托管模式**（独立 `game-worker/`，Worker + Durable Object）。
+  - DSH 插件通过 WebSocket 连 Worker，房主不再需要开电脑当服务器/配隧道。
+  - 牌局状态放在每个房间一个 Durable Object 中，支持 SQLite 持久化、断线/WSS 心跳。
+  - 复用现有 `game/zhajinhua.js` 规则；本地局域网模式保留为备用。
+  - 本地 `wrangler dev` 已验证创建/加入/开始/看牌/弃牌/结算、DO 重启后状态恢复；**尚未部署到 Cloudflare**。
+
 ## 0.10.2 — 2026-10-20
 
 - Cloudflare 隧道支持两种模式：快速隧道（随机 trycloudflare 地址）和命名隧道（使用已有域名 + `~/.cloudflared/config.yml`）。

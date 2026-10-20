@@ -109,6 +109,7 @@ window.__ModuleLoader__.load({
       'game.error': '错误：{message}',
       'game.tunnelCmd': '隧道命令：cloudflared tunnel --url http://localhost:{port}',
       'game.localOnly': '同一 Wi-Fi 下直接创建房间即可，不需要公网地址。',
+      'game.cloudHint': '房间跑在 Cloudflare 上，不需要你开电脑当服务器；朋友仍需安装 DSH 插件。',
       'game.shareHint': '朋友把邀请码发给你，粘贴到上面点「加入」就能进房间。',
       'game.joinPlaceholder': '粘贴邀请码，或「地址 房间号」',
       'game.joinFormat': '邀请码/地址格式不对',
@@ -130,6 +131,14 @@ window.__ModuleLoader__.load({
       'game.tunnelName': '隧道名称（可选）',
       'game.tunnelQuickHint': '需要先安装 cloudflared：brew install cloudflared',
       'game.tunnelNamedHint': '先完成 cloudflared tunnel login / create / route dns；配置里的 ingress 要指向本机游戏端口。',
+      'game.mode': '联机模式',
+      'game.modeLocal': '局域网（本机服务器）',
+      'game.modeCloud': 'Cloudflare（推荐）',
+      'game.cloudUrl': 'Cloudflare Worker 地址',
+      'game.cloudUrlHint': '例如 https://moyu-zjh.<你的子域>.workers.dev',
+      'game.cloudNotConfigured': '请先在高级设置里填写 Cloudflare Worker 地址',
+      'game.cloudBadge': 'Cloudflare',
+      'game.localBadge': '局域网',
       'settings.subtitle': '摸鱼套件：小说只是第一个模块',
       'settings.bookshelf': '书架',
       'settings.importPath': 'TXT 文件绝对路径，例如 ~/novels/book.txt',
@@ -449,6 +458,7 @@ window.__ModuleLoader__.load({
       'game.error': 'Error: {message}',
       'game.tunnelCmd': 'Tunnel: cloudflared tunnel --url http://localhost:{port}',
       'game.localOnly': 'On the same Wi-Fi, just create a room; no public address is needed.',
+      'game.cloudHint': 'Rooms run on Cloudflare; your computer does not need to be a server. Friends still need the DSH plugin.',
       'game.shareHint': 'Send the invite code to a friend; they paste it above and press Join.',
       'game.joinPlaceholder': 'Paste an invite code, or “address room-code”',
       'game.joinFormat': 'Invalid invite code or address',
@@ -470,6 +480,14 @@ window.__ModuleLoader__.load({
       'game.tunnelName': 'Tunnel name (optional)',
       'game.tunnelQuickHint': 'Install cloudflared first: brew install cloudflared',
       'game.tunnelNamedHint': 'Run cloudflared tunnel login / create / route dns first; the config ingress must point to the local game port.',
+      'game.mode': 'Connection mode',
+      'game.modeLocal': 'LAN (local server)',
+      'game.modeCloud': 'Cloudflare (recommended)',
+      'game.cloudUrl': 'Cloudflare Worker URL',
+      'game.cloudUrlHint': 'e.g. https://moyu-zjh.<your-subdomain>.workers.dev',
+      'game.cloudNotConfigured': 'Set the Cloudflare Worker URL in advanced settings first',
+      'game.cloudBadge': 'Cloudflare',
+      'game.localBadge': 'LAN',
       'settings.subtitle': 'A slack-off suite; novels are only the first module',
       'settings.bookshelf': 'Bookshelf',
       'settings.importPath': 'Absolute path to a TXT file, e.g. ~/novels/book.txt',
@@ -916,6 +934,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
     const gameStore = createStore(Object.assign({
       playerName: '摸鱼工',
       serverPort: 17890,
+      cloudUrl: '',
+      mode: 'cloud',
       publicUrl: '',
       tunnelMode: 'quick',
       tunnelHostname: '',
@@ -937,6 +957,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify({
           playerName: current.playerName,
           serverPort: current.serverPort,
+          cloudUrl: current.cloudUrl,
+          mode: current.mode,
           publicUrl: current.publicUrl,
           tunnelMode: current.tunnelMode,
           tunnelHostname: current.tunnelHostname,
@@ -968,7 +990,60 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
     }
 
     let gameSource;
+    let gameSocket;
+
+    function closeGameSocket() {
+      if (gameSocket !== undefined) {
+        try { gameSocket.close(); } catch { /* already closed */ }
+        gameSocket = undefined;
+      }
+    }
+
+    function gameWebSocketUrl(session) {
+      const base = session.baseUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
+      return `${base}/api/rooms/${session.roomCode}/ws?token=${encodeURIComponent(session.token)}`;
+    }
+
+    function connectGameSocket(session) {
+      closeGameSocket();
+      gameStore.set({ session, connection: 'connecting', error: '', snapshot: null });
+      if (typeof WebSocket !== 'function') {
+        gameStore.set({ connection: 'error', error: '当前环境不支持 WebSocket' });
+        return;
+      }
+      let socket;
+      try {
+        socket = new WebSocket(gameWebSocketUrl(session));
+      } catch (failure) {
+        gameStore.set({ connection: 'error', error: String(failure?.message ?? failure) });
+        return;
+      }
+      gameSocket = socket;
+      socket.onopen = () => {
+        gameStore.set({ connection: 'online', error: '' });
+      };
+      socket.onmessage = (event) => {
+        let message;
+        try { message = JSON.parse(event.data); } catch { return; }
+        if (message.type === 'state') {
+          gameStore.set({ snapshot: message.state, connection: 'online', error: '' });
+        } else if (message.type === 'error') {
+          gameStore.set({ error: String(message.error ?? '操作失败') });
+        }
+      };
+      socket.onerror = () => {
+        gameStore.set({ connection: 'error' });
+      };
+      socket.onclose = () => {
+        if (gameSocket === socket) {
+          gameSocket = undefined;
+          gameStore.set({ connection: 'error' });
+        }
+      };
+    }
+
     function closeGameSource() {
+      closeGameSocket();
       if (gameSource !== undefined) {
         try { gameSource.close(); } catch { /* already closed */ }
         gameSource = undefined;
@@ -976,6 +1051,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
     }
 
     function connectGameSession(session) {
+      if (session.transport === 'ws') {
+        connectGameSocket(session);
+        return;
+      }
       closeGameSource();
       gameStore.set({ session, connection: 'connecting', error: '', snapshot: null });
       if (typeof EventSource !== 'function') {
@@ -1022,6 +1101,26 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       }
     }
 
+    async function createCloudGameRoom() {
+      const current = gameStore.get();
+      const baseUrl = normalizeGameBase(current.cloudUrl);
+      if (baseUrl === '') throw new Error('请先在高级设置里填写 Cloudflare Worker 地址');
+      gameStore.set({ error: '' });
+      const data = await gameRequest(baseUrl, '/api/rooms', { playerName: current.playerName, name: current.playerName }, 'POST');
+      const session = {
+        baseUrl,
+        roomCode: data.roomCode,
+        token: data.token,
+        seat: data.seat,
+        share: data.share ?? { url: baseUrl },
+        transport: 'ws',
+        cloud: true,
+      };
+      gameStore.set({ session, snapshot: data.state ?? null, rooms: null });
+      connectGameSocket(session);
+      return session;
+    }
+
     async function joinGameRoom(address, roomCode, playerName) {
       const baseUrl = normalizeGameBase(address);
       const code = String(roomCode ?? '').trim().toUpperCase();
@@ -1035,7 +1134,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         roomCode: data.roomCode,
         token: data.token,
         seat: data.seat,
-        share: data.share,
+        share: data.share ?? { url: baseUrl },
+        transport: data.transport === 'ws' ? 'ws' : 'sse',
         local: baseUrl.includes('127.0.0.1') || baseUrl.includes('localhost'),
       };
       gameStore.set({ session, snapshot: data.state ?? null, rooms: null });
@@ -1046,6 +1146,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
     async function leaveGameRoom() {
       const session = gameStore.get().session;
       closeGameSource();
+      closeGameSocket();
       gameStore.set({ session: null, snapshot: null, connection: 'idle', error: '', overlayOpen: false });
       if (session !== null && session !== undefined) {
         try {
@@ -1060,6 +1161,11 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const session = gameStore.get().session;
       if (session === null || session === undefined) return;
       try {
+        if (session.transport === 'ws' && gameSocket !== undefined && gameSocket.readyState === WebSocket.OPEN) {
+          gameSocket.send(JSON.stringify({ type: 'action', action }));
+          gameStore.set({ error: '' });
+          return;
+        }
         await gameRequest(session.baseUrl, `/api/rooms/${session.roomCode}/action`, { token: session.token, action }, 'POST');
         gameStore.set({ error: '' });
       } catch (failure) {
@@ -1071,6 +1177,11 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const session = gameStore.get().session;
       if (session === null || session === undefined) return;
       try {
+        if (session.transport === 'ws' && gameSocket !== undefined && gameSocket.readyState === WebSocket.OPEN) {
+          gameSocket.send(JSON.stringify({ type: kind }));
+          gameStore.set({ error: '' });
+          return;
+        }
         await gameRequest(session.baseUrl, `/api/rooms/${session.roomCode}/${kind}`, { token: session.token }, 'POST');
         gameStore.set({ error: '' });
       } catch (failure) {
@@ -3300,7 +3411,12 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setBusy(true);
         setNotice('');
         try {
-          await createGameRoom();
+          if (game.mode === 'cloud') {
+            if (normalizeGameBase(game.cloudUrl) === '') throw new Error(t('game.cloudNotConfigured'));
+            await createCloudGameRoom();
+          } else {
+            await createGameRoom();
+          }
           setNotice('');
         } catch (failure) {
           gameStore.set({ error: String(failure?.message ?? failure) });
@@ -3370,6 +3486,26 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 
       const advanced = showAdvanced
         ? h('div', { className: 'my-form-section' },
+          h('div', { className: 'my-field' },
+            h('span', { className: 'my-field-label' }, t('game.mode')),
+            h('select', {
+              className: 'my-select',
+              value: game.mode,
+              onChange: (event) => setGamePrefs({ mode: event.currentTarget.value }),
+            },
+              h('option', { value: 'cloud' }, t('game.modeCloud')),
+              h('option', { value: 'local' }, t('game.modeLocal')))),
+          game.mode === 'cloud'
+            ? h('div', { className: 'my-field' },
+              h('span', { className: 'my-field-label' }, t('game.cloudUrl')),
+              h('input', {
+                className: 'my-field-input',
+                value: game.cloudUrl,
+                placeholder: 'https://moyu-zjh.<subdomain>.workers.dev',
+                onChange: (event) => setGamePrefs({ cloudUrl: event.currentTarget.value }),
+              }))
+            : null,
+          h('div', { className: 'my-sub' }, game.mode === 'cloud' ? t('game.cloudUrlHint') : t('game.localOnly')),
           h('div', { className: 'my-form-grid' },
             h('div', { className: 'my-field' },
               h('span', { className: 'my-field-label' }, t('game.playerName')),
@@ -3420,7 +3556,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                   className: 'my-btn',
                   onClick: () => join(`${manualAddress} ${room.roomCode}`),
                 }, t('game.joinRoom'))))),
-          h('div', { className: 'my-form-label' }, t('game.cloudflare')),
+          game.mode === 'cloud' ? null : h('div', { className: 'my-form-label' }, t('game.cloudflare')),
           h('div', { className: 'my-row' },
             h('select', {
               className: 'my-select',
@@ -3429,7 +3565,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
             },
               h('option', { value: 'quick' }, t('game.tunnelQuick')),
               h('option', { value: 'named' }, t('game.tunnelNamed')))),
-          game.tunnelMode === 'named'
+          game.mode === 'cloud' ? null : (game.tunnelMode === 'named'
             ? h(React.Fragment, null,
               h('div', { className: 'my-field' },
                 h('span', { className: 'my-field-label' }, t('game.tunnelHostname')),
@@ -3455,8 +3591,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                   onChange: (event) => setGamePrefs({ tunnelName: event.currentTarget.value }),
                 })),
               h('div', { className: 'my-sub' }, t('game.tunnelNamedHint')))
-            : h('div', { className: 'my-sub' }, t('game.tunnelQuickHint')),
-          h('div', { className: 'my-field' },
+            : h('div', { className: 'my-sub' }, t('game.tunnelQuickHint'))),
+          game.mode === 'cloud' ? null : h('div', { className: 'my-field' },
             h('span', { className: 'my-field-label' }, t('game.publicUrl')),
             h('input', {
               className: 'my-field-input',
@@ -3479,7 +3615,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                 className: 'my-btn primary',
                 onClick: () => { copyText(inviteText); setNotice(t('game.inviteCopied')); },
               }, t('game.copyInvite')),
-              session.local === false ? null : h('button', { className: 'my-btn', disabled: tunnelBusy, onClick: tunnel },
+              session.cloud === true || session.transport === 'ws' || session.local === false ? null : h('button', { className: 'my-btn', disabled: tunnelBusy, onClick: tunnel },
                 tunnelBusy ? t('game.tunnelStarting') : t('game.oneClickTunnel')),
               h('button', { className: 'my-btn', onClick: () => { void leaveGameRoom(); } }, t('game.leave')))),
           notice === '' ? null : h('div', { className: 'my-sub' }, notice),
@@ -3494,7 +3630,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 
       return h('div', { className: 'my-card' },
         h('h3', null, t('game.title')),
-        h('div', { className: 'my-sub' }, t('game.localOnly')),
+        h('div', { className: 'my-sub' }, game.mode === 'cloud' ? t('game.cloudHint') : t('game.localOnly')),
         h('div', { className: 'my-row' },
           h('button', { className: 'my-btn primary', disabled: busy, onClick: create },
             busy ? t('game.creating') : t('game.create')),
