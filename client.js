@@ -43,6 +43,13 @@ window.__ModuleLoader__.load({
       'jump.placeholder': '页码，或 c章节号；回车确认，Esc 取消',
       'settings.nav': '上班摸鱼才叫赚钱',
       'settings.title': '上班摸鱼才叫赚钱',
+      'modules.title': '摸鱼模块',
+      'modules.novel': '小说',
+      'modules.stocks': '股票',
+      'modules.web': '网页',
+      'modules.video': '视频',
+      'modules.comingSoon': '即将上线',
+      'modules.placeholder': '这个摸鱼模块还在开发中。小说模块现在已经可用，后续模块会共用这套外壳。',
       'settings.subtitle': '摸鱼套件：小说只是第一个模块',
       'settings.bookshelf': '书架',
       'settings.importPath': 'TXT 文件绝对路径，例如 ~/novels/book.txt',
@@ -297,6 +304,13 @@ window.__ModuleLoader__.load({
       'jump.placeholder': 'page, or c<chapter>; Enter to confirm, Esc to cancel',
       'settings.nav': 'Slack Off to Earn',
       'settings.title': 'Slack Off to Earn',
+      'modules.title': 'Slack modules',
+      'modules.novel': 'Novels',
+      'modules.stocks': 'Stocks',
+      'modules.web': 'Web',
+      'modules.video': 'Video',
+      'modules.comingSoon': 'soon',
+      'modules.placeholder': 'This slack module is still in development. The novel module is ready, and future modules will reuse this shell.',
       'settings.subtitle': 'A slack-off suite; novels are only the first module',
       'settings.bookshelf': 'Bookshelf',
       'settings.importPath': 'Absolute path to a TXT file, e.g. ~/novels/book.txt',
@@ -557,6 +571,11 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 .my-input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--dsw-alias-label-primary);font:inherit}
 .my-settings{display:flex;flex-direction:column;gap:18px;padding:4px 0 24px;color:var(--dsw-alias-label-primary);font-size:13px}
 .my-settings h2{margin:0;font-size:15px}
+.my-modules{display:flex;gap:6px;flex-wrap:wrap;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:6px;background:var(--dsw-alias-bg-layer-2)}
+.my-module{height:32px;padding:0 14px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.my-module.active{background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base)}
+.my-module:not(.active):hover{background:var(--dsw-alias-interactive-bg-hover)}
+.my-module-tag{font-size:10px;opacity:.65}
 .my-tabs{display:flex;gap:2px;border-bottom:1px solid var(--dsw-alias-border-l1);margin:2px 0}
 .my-tab{height:34px;padding:0 14px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;cursor:pointer}
 .my-tab:hover{color:var(--dsw-alias-label-primary)}
@@ -3939,15 +3958,23 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const tr = useT(locale);
       t = t ?? tr;
       const snap = useStore(store);
+      const [activeModule, setActiveModule] = React.useState('novel');
       const [tab, setTab] = React.useState(() => (snap.settings.sources.length === 0 ? 'sources' : 'shelf'));
       const [findRequest, setFindRequest] = React.useState(null);
 
+      const modules = [
+        ['novel', t('modules.novel'), true],
+        ['stocks', t('modules.stocks'), false],
+        ['web', t('modules.web'), false],
+        ['video', t('modules.video'), false],
+      ];
       const tabs = [
         ['shelf', t('settings.bookshelf')],
         ['find', t('find.title')],
         ['sources', t('settings.tabs.sources')],
         ['prefs', t('settings.tabs.prefs')],
       ];
+      const activeModuleLabel = (modules.find(([id]) => id === activeModule) ?? modules[0])[1];
 
       function goFind(sourceId, keyword) {
         setFindRequest({ sourceId, keyword, nonce: Date.now() });
@@ -3959,32 +3986,47 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         h('div', null,
           h('h2', null, t('settings.title')),
           h('div', { className: 'my-sub' }, t('settings.subtitle'))),
-        h('div', { className: 'my-tabs' },
-          tabs.map(([id, label]) => h('button', {
-            key: id,
-            className: `my-tab${tab === id ? ' active' : ''}`,
-            onClick: () => setTab(id),
-          }, label))),
+        h('div', null,
+          h('div', { className: 'my-form-label' }, t('modules.title')),
+          h('div', { className: 'my-modules' },
+            modules.map(([id, label, enabled]) => h('button', {
+              key: id,
+              className: `my-module${activeModule === id ? ' active' : ''}`,
+              onClick: () => setActiveModule(id),
+            }, label, enabled ? null : h('span', { className: 'my-module-tag' }, t('modules.comingSoon')))))),
 
-        h('div', { style: { display: tab === 'shelf' ? 'block' : 'none' } },
-          h(ShelfCard, {
-            snap,
-            t,
-            onGoSources: () => setTab('sources'),
-            onGoFind: () => setTab('find'),
-          })),
-        h('div', { style: { display: tab === 'find' ? 'block' : 'none' } },
-          h(FindBooksCard, {
-            snap,
-            t,
-            request: findRequest,
-            onConsumed: () => setFindRequest(null),
-            onGoSources: () => setTab('sources'),
-          })),
-        h('div', { style: { display: tab === 'sources' ? 'block' : 'none' } },
-          h(SourcesCard, { snap, t, onSearch: goFind })),
-        h('div', { style: { display: tab === 'prefs' ? 'block' : 'none' } },
-          h(PreferencesCard, { snap, t })));
+        h('div', { style: { display: activeModule === 'novel' ? 'block' : 'none' } },
+          h('div', { className: 'my-tabs' },
+            tabs.map(([id, label]) => h('button', {
+              key: id,
+              className: `my-tab${tab === id ? ' active' : ''}`,
+              onClick: () => setTab(id),
+            }, label))),
+          h('div', { style: { display: tab === 'shelf' ? 'block' : 'none' } },
+            h(ShelfCard, {
+              snap,
+              t,
+              onGoSources: () => setTab('sources'),
+              onGoFind: () => setTab('find'),
+            })),
+          h('div', { style: { display: tab === 'find' ? 'block' : 'none' } },
+            h(FindBooksCard, {
+              snap,
+              t,
+              request: findRequest,
+              onConsumed: () => setFindRequest(null),
+              onGoSources: () => setTab('sources'),
+            })),
+          h('div', { style: { display: tab === 'sources' ? 'block' : 'none' } },
+            h(SourcesCard, { snap, t, onSearch: goFind })),
+          h('div', { style: { display: tab === 'prefs' ? 'block' : 'none' } },
+            h(PreferencesCard, { snap, t }))),
+
+        activeModule === 'novel'
+          ? null
+          : h('div', { className: 'my-card' },
+            h('h3', null, activeModuleLabel),
+            h('div', { className: 'my-sub' }, t('modules.placeholder'))));
     }
 
     // ------------------------------------------------------------------
