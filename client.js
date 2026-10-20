@@ -575,6 +575,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 .my-book{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 4px;border-top:1px solid var(--dsw-alias-border-l1)}
 .my-cover{width:38px;height:52px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:600;flex:none;overflow:hidden}
 .my-select-sm{height:28px;font-size:11.5px}
+.my-cover-img{width:100%;height:100%;object-fit:cover;border-radius:6px;display:block}
 .my-check{flex:none}
 .my-book:first-of-type{border-top:0}
 .my-book-main{flex:1;min-width:0}
@@ -1503,6 +1504,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         tocStatus: existing?.tocStatus === 'ready' ? 'ready' : 'loading',
         tocError: '',
         group: existing?.group ?? '',
+        cover: existing?.cover || result.cover || '',
         lastReadAt: existing?.lastReadAt ?? 0,
         addedAt: existing?.addedAt ?? Date.now(),
       });
@@ -1809,6 +1811,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         title: pickFrom(item, search.title) || textOf(item) || pickFrom(item, 'a@text') || '',
         author: pickFrom(item, search.author),
         bookUrl: resolveUrl(pickFrom(item, search.bookUrl || 'a@href'), baseUrl),
+        cover: resolveUrl(pickFrom(item, search.cover || 'img@src'), baseUrl),
       })).filter((result) => result.bookUrl !== '');
     }
 
@@ -3689,7 +3692,17 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                 onChange: () => toggleSelected(book.id),
               })
               : null,
-            h('div', { className: 'my-cover', style: coverStyle(book.title) }, String(book.title ?? '?').trim().slice(0, 1)),
+            h('div', { className: 'my-cover', style: coverStyle(book.title) },
+              book.cover
+                ? h('img', {
+                  className: 'my-cover-img',
+                  src: book.cover,
+                  alt: '',
+                  loading: 'lazy',
+                  referrerPolicy: 'no-referrer',
+                  onError: (event) => { event.currentTarget.remove(); },
+                })
+                : String(book.title ?? '?').trim().slice(0, 1)),
             h('div', { className: 'my-book-main' },
               h('div', { className: 'my-book-title' }, book.title),
               h('div', { className: 'my-book-meta' },
