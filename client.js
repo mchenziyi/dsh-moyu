@@ -217,6 +217,7 @@ window.__ModuleLoader__.load({
       'toc.title': '目录',
       'toc.filter': '筛选章节…',
       'toc.loading': '正在读取目录…',
+      'toc.progress': '正在读取目录… 已加载 {count} 章',
       'toc.empty': '没有匹配的章节',
       'toc.hint': '↑↓ 选择 · Enter 跳转 · Esc 关闭',
     };
@@ -414,6 +415,7 @@ window.__ModuleLoader__.load({
       'toc.title': 'Contents',
       'toc.filter': 'Filter chapters…',
       'toc.loading': 'Loading contents…',
+      'toc.progress': 'Loading contents… {count} chapters so far',
       'toc.empty': 'No matching chapters',
       'toc.hint': '↑↓ select · Enter jump · Esc close',
     };
@@ -887,6 +889,35 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       return candidates.length === 0 ? '' : candidates[0].href;
     }
 
+    function detectTocTotalPages(doc) {
+      for (const node of doc.querySelectorAll('.pagination, .pages')) {
+        const match = /(\d+)\s*\/\s*(\d+)/.exec(node.textContent ?? '');
+        if (match !== null) {
+          const total = Number(match[2]);
+          if (Number.isInteger(total) && total > 1 && total <= 60) return total;
+        }
+      }
+      return 0;
+    }
+
+    /** Replace the page number in a pagination URL (index_2.html / ?page=2). */
+    function replaceTocPageNumber(templateUrl, number) {
+      try {
+        const url = new URL(templateUrl);
+        if (/([?&]page=)\d+/.test(url.search)) {
+          url.search = url.search.replace(/([?&]page=)\d+/, `$1${number}`);
+          return url.toString();
+        }
+        if (/\d+(\.html?)$/.test(url.pathname)) {
+          url.pathname = url.pathname.replace(/\d+(\.html?)$/, `${number}$1`);
+          return url.toString();
+        }
+      } catch {
+        /* ignore */
+      }
+      return '';
+    }
+
     async function fetchToc(source, bookUrl, signal, onProgress) {
       const chapters = [];
       const seenChapters = new Set();
@@ -895,6 +926,25 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       let pageUrl = bookUrl;
       let complete = true;
       const deadline = Date.now() + 30_000;
+
+      const mergePage = (doc, finalUrl, pageNumber) => {
+        const parsed = probeToc(source.toc, doc, finalUrl);
+        if (title === '') title = parsed.title;
+        for (const chapter of parsed.chapters) {
+          if (seenChapters.has(chapter.url)) continue;
+          seenChapters.add(chapter.url);
+          chapters.push(chapter);
+        }
+        if (typeof onProgress === 'function') {
+          try {
+            onProgress({ page: pageNumber, chapters: chapters.length, list: chapters.slice() });
+          } catch {
+            /* progress is best effort */
+          }
+        }
+        return parsed;
+      };
+
       for (let page = 0; page < 30; page += 1) {
         if (Date.now() > deadline) {
           complete = false;
@@ -919,18 +969,43 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           break;
         }
         const doc = parseHtml(response.text);
-        const parsed = probeToc(source.toc, doc, response.finalUrl);
-        if (title === '') title = parsed.title;
-        for (const chapter of parsed.chapters) {
-          if (seenChapters.has(chapter.url)) continue;
-          seenChapters.add(chapter.url);
-          chapters.push(chapter);
-        }
-        if (typeof onProgress === 'function') {
-          try { onProgress({ page: page + 1, chapters: chapters.length }); } catch { /* progress is best effort */ }
-        }
+        mergePage(doc, response.finalUrl, page + 1);
         const nextPage = findNextTocPage(doc, response.finalUrl, bookUrl, visitedPages);
         if (nextPage === '') break;
+
+        // Numeric pagination exposes the total page count: fetch the rest in
+        // small parallel batches instead of walking page by page.
+        if (page === 0) {
+          const totalPages = detectTocTotalPages(doc);
+          if (totalPages > 1) {
+            const urls = [];
+            for (let number = 2; number <= totalPages; number += 1) {
+              const candidate = replaceTocPageNumber(nextPage, number);
+              if (candidate !== '' && !visitedPages.has(candidate)) urls.push(candidate);
+            }
+            if (urls.length >= totalPages - 2) {
+              let failedPages = 0;
+              for (let start = 0; start < urls.length; start += 4) {
+                if (Date.now() > deadline) {
+                  complete = false;
+                  break;
+                }
+                const batch = urls.slice(start, start + 4);
+                const fetched = await Promise.allSettled(batch.map((url) => proxyFetch(url, signal)));
+                for (let index = 0; index < fetched.length; index += 1) {
+                  const item = fetched[index];
+                  if (item.status !== 'fulfilled') {
+                    failedPages += 1;
+                    continue;
+                  }
+                  mergePage(parseHtml(item.value.text), item.value.finalUrl, start + index + 2);
+                }
+              }
+              if (failedPages > 0) complete = false;
+              return { title, chapters, complete };
+            }
+          }
+        }
         pageUrl = nextPage;
       }
       return { title, chapters, complete };
@@ -1018,13 +1093,13 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 
     const localTocCache = new Map();
 
-    async function ensureToc(book, signal) {
+    async function ensureToc(book, signal, onProgress) {
       if (book.kind === 'online') {
         const cached = tocCache.get(book.id);
         if (cached !== undefined && (book.tocStatus === undefined || book.tocStatus === 'ready')) return cached;
         const source = store.get().settings.sources.find((entry) => entry.id === book.sourceId);
         if (source === undefined) throw new Error('书源已删除');
-        const parsed = await fetchToc(source, book.bookUrl, signal);
+        const parsed = await fetchToc(source, book.bookUrl, signal, onProgress);
         if (parsed.chapters.length === 0) throw new Error('目录为空');
         tocCache.set(book.id, parsed.chapters);
         const snap = store.get();
@@ -2050,7 +2125,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setTocState({ status: 'loading', chapters: [] });
         setTocFilter('');
         setTocSelected(snap.reading.chapter);
-        ensureToc(book, controller.signal)
+        ensureToc(book, controller.signal, (progress) => {
+          if (controller.signal.aborted) return;
+          setTocState({ status: 'loading', chapters: progress.list ?? [] });
+        })
           .then((chapters) => {
             if (!controller.signal.aborted) setTocState({ status: 'ready', chapters });
           })
@@ -2153,23 +2231,30 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
             },
           }),
           h('div', { className: 'my-toc-list', ref: tocListRef },
+            tocState.status === 'error' && tocState.chapters.length === 0
+              ? h('div', { className: 'my-toc-empty' }, tocState.message)
+              : filteredToc.map((entry) => h('button', {
+                key: entry.index,
+                type: 'button',
+                'data-toc-index': entry.index,
+                className: 'my-toc-row'
+                  + (entry.index === snap.reading.chapter ? ' current' : '')
+                  + (entry.index === tocSelected ? ' selected' : ''),
+                onClick: () => jumpToChapter(entry.index),
+              },
+                h('span', { className: 'my-toc-index' }, String(entry.index + 1)),
+                h('span', { className: 'my-toc-name' }, entry.chapter.title))),
             tocState.status === 'loading'
-              ? h('div', { className: 'my-toc-empty' }, t('toc.loading'))
-              : (tocState.status === 'error'
-                ? h('div', { className: 'my-toc-empty' }, tocState.message)
-                : (filteredToc.length === 0
-                  ? h('div', { className: 'my-toc-empty' }, t('toc.empty'))
-                  : filteredToc.map((entry) => h('button', {
-                    key: entry.index,
-                    type: 'button',
-                    'data-toc-index': entry.index,
-                    className: 'my-toc-row'
-                      + (entry.index === snap.reading.chapter ? ' current' : '')
-                      + (entry.index === tocSelected ? ' selected' : ''),
-                    onClick: () => jumpToChapter(entry.index),
-                  },
-                    h('span', { className: 'my-toc-index' }, String(entry.index + 1)),
-                    h('span', { className: 'my-toc-name' }, entry.chapter.title)))))),
+              ? h('div', { className: 'my-toc-empty' }, tocState.chapters.length === 0
+                ? t('toc.loading')
+                : t('toc.progress', { count: tocState.chapters.length }))
+              : null,
+            tocState.status === 'ready' && filteredToc.length === 0
+              ? h('div', { className: 'my-toc-empty' }, t('toc.empty'))
+              : null,
+            tocState.status === 'error' && tocState.chapters.length > 0
+              ? h('div', { className: 'my-toc-empty' }, tocState.message)
+              : null),
           h('div', { className: 'my-toc-foot' }, t('toc.hint')));
       }
 
