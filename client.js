@@ -143,6 +143,12 @@ window.__ModuleLoader__.load({
       'find.hint': '选一个书源，输入书名或作者，搜索后点「加入书架」；加入后回到书架即可阅读。',
       'find.noSources': '还没有书源。',
       'find.goSources': '去添加书源',
+      'find.detail': '查看详情',
+      'find.detailTitle': '书籍详情',
+      'find.detailLoading': '正在读取目录…',
+      'find.detailChapters': '目录：{count} 章',
+      'find.detailAdd': '加入书架',
+      'find.detailClose': '关闭',
       'find.noSearchable': '现有书源都没有搜索规则：去「书源」里编辑补一个，或用下面的书籍页 URL 直接加入。',
       'shelf.emptyHint': '书架是空的：导入本地 TXT，或先添加在线书源再找书。',
       'shelf.goSources': '去添加书源',
@@ -160,6 +166,9 @@ window.__ModuleLoader__.load({
       'switch.cancel': '取消',
       'switch.needSource': '没有其他带搜索规则的书源',
       'book.source': '来源：{name}',
+      'book.tocLoading': '目录读取中',
+      'book.tocPartial': '目录部分完成',
+      'book.tocError': '目录读取失败',
       'settings.sourceHint': '粘贴书源规则 JSON，或从文件导入。规则格式见 README；插件不内置任何站点。',
       'settings.sourceAdd': '添加书源',
       'settings.sourceFile': '从文件导入',
@@ -321,6 +330,12 @@ window.__ModuleLoader__.load({
       'find.hint': 'Pick a source, type a title or author, then add a result to the shelf.',
       'find.noSources': 'No sources yet.',
       'find.goSources': 'Add a source',
+      'find.detail': 'Details',
+      'find.detailTitle': 'Book details',
+      'find.detailLoading': 'Loading contents…',
+      'find.detailChapters': 'Contents: {count} chapters',
+      'find.detailAdd': 'Add to shelf',
+      'find.detailClose': 'Close',
       'find.noSearchable': 'None of your sources has a search rule: edit one under “Sources”, or add a book by its page URL below.',
       'shelf.emptyHint': 'The shelf is empty: import a local TXT, or add an online source and find a book.',
       'shelf.goSources': 'Add a source',
@@ -338,6 +353,9 @@ window.__ModuleLoader__.load({
       'switch.cancel': 'Cancel',
       'switch.needSource': 'No other source with a search rule',
       'book.source': 'Source: {name}',
+      'book.tocLoading': 'Loading contents',
+      'book.tocPartial': 'Partial contents',
+      'book.tocError': 'Contents failed',
       'settings.sourceHint': 'Paste a source rule JSON, or import a file. See README for the format; no site is bundled.',
       'settings.sourceAdd': 'Add source',
       'settings.sourceFile': 'Import file',
@@ -448,6 +466,9 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 .my-textarea:focus{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-1px}
 .my-num{width:96px;height:30px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:12.5px}
 .my-error{color:var(--dsw-alias-state-error-primary);font-size:12px}
+.my-detail{border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--dsw-alias-bg-base)}
+.my-detail-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.my-detail-chapters{display:flex;flex-direction:column;gap:3px;max-height:130px;overflow:auto;color:var(--dsw-alias-label-secondary);font-size:12px}
 .my-kbd{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--dsw-alias-label-secondary)}
 .my-kbd code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dsw-alias-label-primary);font-size:11.5px}
 `;
@@ -1018,27 +1039,56 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       return book;
     }
 
-    function addOnlineBookToShelf(source, result, toc) {
-      const id = `online:${source.id}:${result.bookUrl}`;
-      const book = {
+    function onlineBookId(source, result) {
+      return `online:${source.id}:${result.bookUrl}`;
+    }
+
+    /** Add an online book immediately; its TOC can be filled in the background. */
+    function addOnlineBookPending(source, result) {
+      const id = onlineBookId(source, result);
+      const snap = store.get();
+      const existing = snap.books.find((entry) => entry.id === id);
+      const book = Object.assign({}, existing ?? {}, {
         id,
         kind: 'online',
-        title: toc.title || result.title || '未命名',
-        author: result.author || '',
+        title: existing?.title || result.title || '未命名',
+        author: existing?.author || result.author || '',
         sourceId: source.id,
         bookUrl: result.bookUrl,
-        chapterCount: toc.chapters.length,
-        addedAt: Date.now(),
-      };
-      const snap = store.get();
+        chapterCount: existing?.chapterCount ?? 0,
+        tocStatus: existing?.tocStatus === 'ready' ? 'ready' : 'loading',
+        tocError: '',
+        addedAt: existing?.addedAt ?? Date.now(),
+      });
       const books = [book, ...snap.books.filter((entry) => entry.id !== id)];
       persistedPatch({
         books,
-        progress: Object.assign({}, snap.progress, { [id]: { chapter: 0, page: 0 } }),
-        reading: { bookId: id, chapter: 0, page: 0 },
-        active: true,
+        progress: Object.assign({}, snap.progress, { [id]: snap.progress[id] ?? { chapter: 0, page: 0 } }),
       });
-      tocCache.set(id, toc.chapters);
+      return id;
+    }
+
+    function updateOnlineBookToc(bookId, toc, error) {
+      const snap = store.get();
+      const complete = toc?.complete !== false;
+      const status = error === undefined ? (complete ? 'ready' : 'partial') : 'error';
+      const books = snap.books.map((book) => (book.id === bookId
+        ? Object.assign({}, book, {
+          title: toc?.title || book.title,
+          chapterCount: Array.isArray(toc?.chapters) ? toc.chapters.length : book.chapterCount,
+          tocStatus: status,
+          tocError: error === undefined ? '' : String(error),
+        })
+        : book));
+      if (error === undefined && Array.isArray(toc?.chapters)) tocCache.set(bookId, toc.chapters);
+      persistedPatch({ books });
+    }
+
+    function addOnlineBookToShelf(source, result, toc) {
+      const id = addOnlineBookPending(source, result);
+      updateOnlineBookToc(id, toc);
+      persistedPatch({ reading: { bookId: id, chapter: 0, page: 0 }, active: true });
+      return id;
     }
 
     // ------------------------------------------------------------------
@@ -2441,6 +2491,11 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [directError, setDirectError] = React.useState('');
       const [directNotice, setDirectNotice] = React.useState('');
       const [directProgress, setDirectProgress] = React.useState('');
+      const [detailResult, setDetailResult] = React.useState(null);
+      const [detailToc, setDetailToc] = React.useState(null);
+      const [detailBusy, setDetailBusy] = React.useState(false);
+      const [detailError, setDetailError] = React.useState('');
+      const [detailProgress, setDetailProgress] = React.useState('');
       const handledRequest = React.useRef(0);
 
       const effectiveSourceId = searchable.some((source) => source.id === sourceId)
@@ -2488,19 +2543,43 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         }
       }
 
-      async function addResult(result) {
+      async function openDetail(result) {
+        const source = sources.find((entry) => entry.id === effectiveSourceId);
+        if (source === undefined) return;
+        setDetailResult(result);
+        setDetailToc(null);
+        setDetailError('');
+        setDetailBusy(true);
+        setDetailProgress(t('find.detailLoading'));
+        try {
+          const toc = await fetchToc(source, result.bookUrl, undefined, (progress) => {
+            setDetailProgress(t('search.tocProgress', { page: progress.page, chapters: progress.chapters }));
+          });
+          if (toc.chapters.length === 0) throw new Error('目录为空');
+          setDetailToc(toc);
+          setDetailProgress('');
+        } catch (failure) {
+          setDetailError(String(failure?.message ?? failure));
+        } finally {
+          setDetailBusy(false);
+        }
+      }
+
+      async function addResult(result, tocOverride) {
         const source = sources.find((entry) => entry.id === effectiveSourceId);
         if (source === undefined) return;
         setAddingUrl(result.bookUrl);
         setError('');
         setAddProgress(t('search.tocLoading'));
+        const bookId = addOnlineBookPending(source, result);
         try {
-          const toc = await fetchToc(source, result.bookUrl, undefined, (progress) => {
+          const toc = tocOverride ?? await fetchToc(source, result.bookUrl, undefined, (progress) => {
             setAddProgress(t('search.tocProgress', { page: progress.page, chapters: progress.chapters }));
           });
           if (toc.chapters.length === 0) throw new Error('目录为空');
-          addOnlineBookToShelf(source, result, toc);
+          updateOnlineBookToc(bookId, toc);
         } catch (failure) {
+          updateOnlineBookToc(bookId, null, String(failure?.message ?? failure));
           setError(t('reader.tocFailed', { message: String(failure?.message ?? failure) }));
         } finally {
           setAddingUrl('');
@@ -2524,15 +2603,18 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setDirectError('');
         setDirectNotice('');
         setDirectProgress(t('search.tocLoading'));
+        const result = { title: '', author: '', bookUrl: target };
+        const bookId = addOnlineBookPending(source, result);
         try {
           const toc = await fetchToc(source, target, undefined, (progress) => {
             setDirectProgress(t('search.tocProgress', { page: progress.page, chapters: progress.chapters }));
           });
           if (toc.chapters.length === 0) throw new Error('目录为空');
-          addOnlineBookToShelf(source, { title: toc.title, author: '', bookUrl: target }, toc);
+          updateOnlineBookToc(bookId, toc);
           setDirectNotice(t('direct.done', { title: toc.title || target }));
           setDirectUrl('');
         } catch (failure) {
+          updateOnlineBookToc(bookId, null, String(failure?.message ?? failure));
           setDirectError(t('direct.failed', { message: String(failure?.message ?? failure) }));
         } finally {
           setDirectBusy(false);
@@ -2551,8 +2633,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
             h('button', {
               className: 'my-btn',
               disabled: addingUrl === result.bookUrl,
-              onClick: () => addResult(result),
-            }, addingUrl === result.bookUrl ? (addProgress || t('search.adding')) : t('search.add')))));
+              onClick: () => openDetail(result),
+            }, t('find.detail')))));
 
       const searchBlock = searchable.length === 0
         ? h('div', null,
@@ -2576,7 +2658,19 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
               busy ? t('search.searching') : t('search.button'))),
           error === '' ? null : h('div', { className: 'my-error' }, error),
           addProgress === '' ? null : h('div', { className: 'my-sub' }, addProgress),
-          resultRows);
+          resultRows,
+          detailResult === null ? null : h('div', { className: 'my-detail' },
+            h('div', { className: 'my-detail-head' },
+              h('strong', null, t('find.detailTitle')),
+              h('button', { className: 'my-btn', onClick: () => setDetailResult(null) }, t('find.detailClose'))),
+            h('div', { className: 'my-book-title' }, detailResult.title || detailResult.bookUrl),
+            detailResult.author === '' ? null : h('div', { className: 'my-book-meta' }, detailResult.author),
+            detailBusy ? h('div', { className: 'my-sub' }, detailProgress || t('find.detailLoading')) : null,
+            detailError === '' ? null : h('div', { className: 'my-error' }, detailError),
+            detailToc === null ? null : h('div', null,
+              h('div', { className: 'my-sub' }, t('find.detailChapters', { count: detailToc.chapters.length })),
+              h('div', { className: 'my-detail-chapters' }, detailToc.chapters.slice(0, 5).map((chapter) => h('div', { key: chapter.url }, chapter.title))),
+              h('button', { className: 'my-btn primary', disabled: detailBusy, onClick: () => addResult(detailResult, detailToc) }, t('find.detailAdd')))));
 
       return h('div', { className: 'my-card' },
         h('h3', null, t('find.title')),
@@ -2642,7 +2736,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
               t('settings.chapters', { n: book.chapterCount ?? 1 }),
               ' · ',
               t('settings.progress', { c: progress.chapter + 1 }),
-              book.kind === 'online' && source !== undefined ? ` · ${t('book.source', { name: source.name })}` : '')),
+              book.kind === 'online' && source !== undefined ? ` · ${t('book.source', { name: source.name })}` : '',
+              book.kind === 'online' && book.tocStatus === 'loading' ? ` · ${t('book.tocLoading')}` : '',
+              book.kind === 'online' && book.tocStatus === 'partial' ? ` · ${t('book.tocPartial')}` : '',
+              book.kind === 'online' && book.tocStatus === 'error' ? ` · ${t('book.tocError')}` : '')),
           h('button', { className: 'my-btn primary', onClick: () => { openBook(book.id); store.set({ active: true }); } }, t('settings.read')),
           book.kind === 'online'
             ? h('button', { className: 'my-btn', onClick: () => setSwitchTarget(book) }, t('switch.title'))
