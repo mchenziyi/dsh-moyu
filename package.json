@@ -1,6 +1,6 @@
 {
   "name": "@mchenziyi/dsh-moyu",
-  "version": "0.7.7",
+  "version": "0.7.8",
   "type": "module",
   "description": "上班摸鱼才叫赚钱：DSH 里的摸鱼套件，第一个模块是伪装成底部状态栏的小说阅读器。",
   "author": "mchenziyi",

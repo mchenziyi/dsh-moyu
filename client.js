@@ -53,6 +53,9 @@ window.__ModuleLoader__.load({
       'settings.lastRead': '已读到第 {c} 章（{percent}%）',
       'settings.notStarted': '未开始',
       'shelf.toc': '目录',
+      'shelf.tocClose': '收起目录',
+      'shelf.tocMore': '仅显示前 {shown} 章，输入筛选可定位',
+      'shelf.tocHint': '点章节从该章开始阅读',
       'settings.reading': '阅读设置',
       'settings.charsPerPage': '每页字数',
       'settings.charsPerPageHint': '状态栏一次显示这么多字，翻页按这个长度切分。',
@@ -257,6 +260,9 @@ window.__ModuleLoader__.load({
       'settings.lastRead': 'Reading ch. {c} ({percent}%)',
       'settings.notStarted': 'Not started',
       'shelf.toc': 'Contents',
+      'shelf.tocClose': 'Hide contents',
+      'shelf.tocMore': 'Showing first {shown} chapters; filter to find more',
+      'shelf.tocHint': 'Click a chapter to start reading there',
       'settings.reading': 'Reading',
       'settings.charsPerPage': 'Chars per page',
       'settings.charsPerPageHint': 'One page is this many characters in the status bar.',
@@ -493,7 +499,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 .my-toc-row.current{color:var(--dsw-alias-label-primary);font-weight:600}
 .my-toc-index{flex:none;width:42px;text-align:right;color:var(--dsw-alias-label-tertiary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px}
 .my-toc-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.my-toc-empty{padding:16px 12px;color:var(--dsw-alias-label-secondary);font-size:12px}
+.my-toc-empty{padding:8px 12px;color:var(--dsw-alias-label-secondary);font-size:12px}
+.my-shelf-toc{border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:8px 10px;margin:0 0 8px;display:flex;flex-direction:column;gap:6px;background:var(--dsw-alias-bg-base)}
+.my-shelf-toc-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.my-shelf-toc-list{max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:1px}
 .my-toc-foot{padding:6px 12px;border-top:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-tertiary);font-size:11px}
 .my-debug-output{max-height:260px;overflow:auto;margin:0;padding:8px 10px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-secondary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-all}
 .my-textarea{min-height:96px;padding:8px 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical}
@@ -2885,6 +2894,40 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [busy, setBusy] = React.useState(false);
       const [error, setError] = React.useState('');
       const [switchTarget, setSwitchTarget] = React.useState(null);
+      const [tocBookId, setTocBookId] = React.useState('');
+      const [tocChapters, setTocChapters] = React.useState([]);
+      const [tocLoading, setTocLoading] = React.useState(false);
+      const [tocError, setTocError] = React.useState('');
+      const [tocFilter, setTocFilter] = React.useState('');
+
+      async function toggleShelfToc(book) {
+        if (tocBookId === book.id) {
+          setTocBookId('');
+          return;
+        }
+        setTocBookId(book.id);
+        setTocChapters([]);
+        setTocFilter('');
+        setTocError('');
+        setTocLoading(true);
+        try {
+          const chapters = await ensureToc(book, undefined, (progress) => {
+            setTocChapters(progress.list ?? []);
+          });
+          setTocChapters(chapters);
+        } catch (failure) {
+          setTocError(String(failure?.message ?? failure));
+        } finally {
+          setTocLoading(false);
+        }
+      }
+
+      function startFromChapter(book, index) {
+        openBook(book.id);
+        setReading({ bookId: book.id, chapter: index, page: 0 });
+        store.set({ active: true, tocOpen: false });
+        setTocBookId('');
+      }
 
       async function runImport() {
         if (busy) return;
@@ -2906,33 +2949,69 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         const totalChapters = Math.max(1, book.chapterCount ?? 1);
         const started = progress.chapter > 0 || progress.page > 0;
         const percent = Math.min(100, Math.max(1, Math.round(((progress.chapter + 1) / totalChapters) * 100)));
-        return h('div', { key: book.id, className: 'my-book' },
-          h('div', { className: 'my-book-main' },
-            h('div', { className: 'my-book-title' }, book.title),
-            h('div', { className: 'my-book-meta' },
-              t('settings.chapters', { n: book.chapterCount ?? 1 }),
-              ' · ',
-              started ? t('settings.lastRead', { c: progress.chapter + 1, percent }) : t('settings.notStarted'),
-              book.kind === 'online' && source !== undefined ? ` · ${t('book.source', { name: source.name })}` : '',
-              book.kind === 'online' && book.tocStatus === 'loading' ? ` · ${t('book.tocLoading')}` : '',
-              book.kind === 'online' && book.tocStatus === 'partial' ? ` · ${t('book.tocPartial')}` : '',
-              book.kind === 'online' && book.tocStatus === 'error' ? ` · ${t('book.tocError')}` : '')),
-          h('button', {
-            className: 'my-btn primary',
-            onClick: () => { openBook(book.id); store.set({ active: true }); },
-          }, started ? t('settings.continue') : t('settings.read')),
-          h('button', {
-            className: 'my-btn',
-            onClick: () => {
-              openBook(book.id);
-              store.set({ active: true });
-              setTimeout(() => store.set({ tocOpen: true }), 0);
-            },
-          }, t('shelf.toc')),
-          book.kind === 'online'
-            ? h('button', { className: 'my-btn', onClick: () => setSwitchTarget(book) }, t('switch.title'))
-            : null,
-          h('button', { className: 'my-btn', onClick: () => removeBook(book.id) }, t('settings.remove')));
+        const query = tocFilter.trim().toLowerCase();
+        const filteredToc = tocBookId === book.id
+          ? tocChapters.map((chapter, index) => ({ chapter, index }))
+            .filter((entry) => query === '' || String(entry.chapter.title).toLowerCase().includes(query))
+          : [];
+        const shownToc = filteredToc.slice(0, 300);
+        const tocPanel = tocBookId !== book.id ? null : h('div', { className: 'my-shelf-toc' },
+          h('div', { className: 'my-shelf-toc-head' },
+            h('strong', null, `${t('shelf.toc')} · ${tocChapters.length}`),
+            h('button', { className: 'my-btn', onClick: () => setTocBookId('') }, t('shelf.tocClose'))),
+          h('input', {
+            className: 'my-toc-filter',
+            value: tocFilter,
+            placeholder: t('toc.filter'),
+            onChange: (event) => setTocFilter(event.currentTarget.value),
+          }),
+          tocError === '' ? null : h('div', { className: 'my-error' }, tocError),
+          h('div', { className: 'my-shelf-toc-list' },
+            shownToc.length === 0 && tocLoading
+              ? h('div', { className: 'my-toc-empty' }, tocChapters.length === 0 ? t('toc.loading') : t('toc.progress', { count: tocChapters.length }))
+              : shownToc.map((entry) => h('button', {
+                key: entry.index,
+                type: 'button',
+                className: 'my-toc-row',
+                onClick: () => startFromChapter(book, entry.index),
+              },
+                h('span', { className: 'my-toc-index' }, String(entry.index + 1)),
+                h('span', { className: 'my-toc-name' }, entry.chapter.title))),
+            tocLoading && tocChapters.length > 0
+              ? h('div', { className: 'my-toc-empty' }, t('toc.progress', { count: tocChapters.length }))
+              : null,
+            filteredToc.length > shownToc.length
+              ? h('div', { className: 'my-toc-empty' }, t('shelf.tocMore', { shown: shownToc.length }))
+              : null,
+            !tocLoading && tocChapters.length === 0 && tocError === ''
+              ? h('div', { className: 'my-toc-empty' }, t('toc.empty'))
+              : null),
+          h('div', { className: 'my-toc-foot' }, t('shelf.tocHint')));
+        return h(React.Fragment, { key: book.id },
+          h('div', { className: 'my-book' },
+            h('div', { className: 'my-book-main' },
+              h('div', { className: 'my-book-title' }, book.title),
+              h('div', { className: 'my-book-meta' },
+                t('settings.chapters', { n: book.chapterCount ?? 1 }),
+                ' · ',
+                started ? t('settings.lastRead', { c: progress.chapter + 1, percent }) : t('settings.notStarted'),
+                book.kind === 'online' && source !== undefined ? ` · ${t('book.source', { name: source.name })}` : '',
+                book.kind === 'online' && book.tocStatus === 'loading' ? ` · ${t('book.tocLoading')}` : '',
+                book.kind === 'online' && book.tocStatus === 'partial' ? ` · ${t('book.tocPartial')}` : '',
+                book.kind === 'online' && book.tocStatus === 'error' ? ` · ${t('book.tocError')}` : '')),
+            h('button', {
+              className: 'my-btn primary',
+              onClick: () => { openBook(book.id); store.set({ active: true }); },
+            }, started ? t('settings.continue') : t('settings.read')),
+            h('button', {
+              className: 'my-btn',
+              onClick: () => toggleShelfToc(book),
+            }, tocBookId === book.id ? t('shelf.tocClose') : t('shelf.toc')),
+            book.kind === 'online'
+              ? h('button', { className: 'my-btn', onClick: () => setSwitchTarget(book) }, t('switch.title'))
+              : null,
+            h('button', { className: 'my-btn', onClick: () => removeBook(book.id) }, t('settings.remove'))),
+          tocPanel);
       });
 
       return h('div', { className: 'my-card' },
