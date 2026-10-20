@@ -49,6 +49,10 @@ window.__ModuleLoader__.load({
       'settings.remove': '删除',
       'settings.chapters': '{n} 章',
       'settings.progress': '第 {c} 章',
+      'settings.continue': '继续阅读',
+      'settings.lastRead': '已读到第 {c} 章（{percent}%）',
+      'settings.notStarted': '未开始',
+      'shelf.toc': '目录',
       'settings.reading': '阅读设置',
       'settings.charsPerPage': '每页字数',
       'settings.charsPerPageHint': '状态栏一次显示这么多字，翻页按这个长度切分。',
@@ -249,6 +253,10 @@ window.__ModuleLoader__.load({
       'settings.remove': 'Remove',
       'settings.chapters': '{n} chapters',
       'settings.progress': 'Chapter {c}',
+      'settings.continue': 'Continue',
+      'settings.lastRead': 'Reading ch. {c} ({percent}%)',
+      'settings.notStarted': 'Not started',
+      'shelf.toc': 'Contents',
       'settings.reading': 'Reading',
       'settings.charsPerPage': 'Chars per page',
       'settings.charsPerPageHint': 'One page is this many characters in the status bar.',
@@ -459,7 +467,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 .my-btn:hover{background:var(--dsw-alias-interactive-bg-hover)}
 .my-btn:disabled{opacity:.55;cursor:default}
 .my-btn.primary{background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);border-color:transparent}
-.my-book{display:flex;align-items:center;gap:10px;padding:8px 4px;border-top:1px solid var(--dsw-alias-border-l1)}
+.my-book{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 4px;border-top:1px solid var(--dsw-alias-border-l1)}
 .my-book:first-of-type{border-top:0}
 .my-book-main{flex:1;min-width:0}
 .my-book-title{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2895,18 +2903,32 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const books = snap.books.map((book) => {
         const progress = snap.progress[book.id] ?? { chapter: 0, page: 0 };
         const source = snap.settings.sources.find((entry) => entry.id === book.sourceId);
+        const totalChapters = Math.max(1, book.chapterCount ?? 1);
+        const started = progress.chapter > 0 || progress.page > 0;
+        const percent = Math.min(100, Math.max(1, Math.round(((progress.chapter + 1) / totalChapters) * 100)));
         return h('div', { key: book.id, className: 'my-book' },
           h('div', { className: 'my-book-main' },
             h('div', { className: 'my-book-title' }, book.title),
             h('div', { className: 'my-book-meta' },
               t('settings.chapters', { n: book.chapterCount ?? 1 }),
               ' · ',
-              t('settings.progress', { c: progress.chapter + 1 }),
+              started ? t('settings.lastRead', { c: progress.chapter + 1, percent }) : t('settings.notStarted'),
               book.kind === 'online' && source !== undefined ? ` · ${t('book.source', { name: source.name })}` : '',
               book.kind === 'online' && book.tocStatus === 'loading' ? ` · ${t('book.tocLoading')}` : '',
               book.kind === 'online' && book.tocStatus === 'partial' ? ` · ${t('book.tocPartial')}` : '',
               book.kind === 'online' && book.tocStatus === 'error' ? ` · ${t('book.tocError')}` : '')),
-          h('button', { className: 'my-btn primary', onClick: () => { openBook(book.id); store.set({ active: true }); } }, t('settings.read')),
+          h('button', {
+            className: 'my-btn primary',
+            onClick: () => { openBook(book.id); store.set({ active: true }); },
+          }, started ? t('settings.continue') : t('settings.read')),
+          h('button', {
+            className: 'my-btn',
+            onClick: () => {
+              openBook(book.id);
+              store.set({ active: true });
+              setTimeout(() => store.set({ tocOpen: true }), 0);
+            },
+          }, t('shelf.toc')),
           book.kind === 'online'
             ? h('button', { className: 'my-btn', onClick: () => setSwitchTarget(book) }, t('switch.title'))
             : null,
