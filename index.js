@@ -12,6 +12,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, extname, isAbsolute } from 'node:path';
+import { createGameServer } from './game/server.js';
 
 export const name = 'moyu';
 
@@ -618,7 +619,67 @@ async function aiHandler(ctx, url, body) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// game module: LAN 炸金花 server
+// ---------------------------------------------------------------------------
+
+let gameServer;
+let gameServerPromise;
+
+async function ensureGameServer(port) {
+  if (gameServer !== undefined) return gameServer;
+  if (gameServerPromise !== undefined) return gameServerPromise;
+  gameServerPromise = createGameServer({
+    port: Number.isInteger(port) && port > 0 ? port : 17890,
+    host: '0.0.0.0',
+  }).then((server) => {
+    gameServer = server;
+    return server;
+  }).finally(() => {
+    gameServerPromise = undefined;
+  });
+  return gameServerPromise;
+}
+
+async function gameCreateHandler(ctx, url, body) {
+  const name = typeof body.playerName === 'string' ? body.playerName : '房主';
+  const config = body.config !== null && typeof body.config === 'object' ? body.config : undefined;
+  const port = Number(body.port);
+  const server = await ensureGameServer(Number.isInteger(port) ? port : undefined);
+  const room = server.createRoom(name, config);
+  return Object.assign({}, room, { share: { port: server.port, lanUrls: server.lanUrls } });
+}
+
+function gameStatusHandler(ctx) {
+  if (gameServer === undefined) return { running: false };
+  return {
+    running: true,
+    port: gameServer.port,
+    lanUrls: gameServer.lanUrls,
+    rooms: [...gameServer.rooms.keys()],
+  };
+}
+
+async function gameStopHandler(ctx) {
+  if (gameServer === undefined) return { running: false };
+  const server = gameServer;
+  gameServer = undefined;
+  await server.close();
+  return { running: false };
+}
+
 export function apply(ctx) {
+  ctx.effect(() => () => {
+    if (gameServer !== undefined) {
+      const server = gameServer;
+      gameServer = undefined;
+      void server.close();
+    }
+  }, 'moyu: game server teardown');
+  route(ctx, '/game/create', gameCreateHandler, ['POST']);
+  route(ctx, '/game/status', gameStatusHandler);
+  route(ctx, '/game/stop', gameStopHandler, ['POST']);
+
   route(ctx, '/local/toc', tocHandler);
   route(ctx, '/local/chapter', chapterHandler);
   route(ctx, '/online/proxy', proxyHandler);

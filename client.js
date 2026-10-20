@@ -16,6 +16,7 @@ window.__ModuleLoader__.load({
     const h = React.createElement;
     const NS = 'moyu';
     const STORAGE_KEY = 'dsh.moyu.v1';
+    const GAME_STORAGE_KEY = 'dsh.moyu.game.v1';
     const TOC_STORE_KEY = 'dsh.moyu.tocs.v1';
     const CHAPTER_STORE_KEY = 'dsh.moyu.chapters.v1';
     const CACHED_CHAPTERS_PER_BOOK = 20;
@@ -45,11 +46,68 @@ window.__ModuleLoader__.load({
       'settings.title': '上班摸鱼才叫赚钱',
       'modules.title': '摸鱼模块',
       'modules.novel': '小说',
+      'modules.game': '游戏',
+      'modules.more': '更多',
       'modules.stocks': '股票',
       'modules.web': '网页',
       'modules.video': '视频',
       'modules.comingSoon': '即将上线',
       'modules.placeholder': '这个摸鱼模块还在开发中。小说模块现在已经可用，后续模块会共用这套外壳。',
+      'game.title': '游戏 · 炸金花',
+      'game.hint': '局域网联机：房主电脑就是服务器。极简模式用 Cmd/Ctrl + Shift + G 呼出，老板键立即隐藏。',
+      'game.playerName': '玩家名',
+      'game.port': '本机端口',
+      'game.publicUrl': '公网隧道地址（可选）',
+      'game.publicHint': '公网联机：先用 cloudflared/ngrok 把本地端口暴露出去，再把公网地址填在这里分享给朋友。',
+      'game.create': '创建房间',
+      'game.creating': '创建中…',
+      'game.address': '服务器地址',
+      'game.roomCode': '房间号',
+      'game.join': '加入',
+      'game.joining': '加入中…',
+      'game.rooms': '公开房间',
+      'game.noRooms': '没有公开房间',
+      'game.refresh': '刷新',
+      'game.joinRoom': '加入',
+      'game.leave': '离开房间',
+      'game.connecting': '正在连接…',
+      'game.connectFailed': '连接失败',
+      'game.noSession': '还没有加入房间',
+      'game.room': '房间',
+      'game.status': '状态',
+      'game.waiting': '等待开始',
+      'game.playing': '对局中',
+      'game.settled': '已结算',
+      'game.pot': '底池',
+      'game.bet': '当前注',
+      'game.round': '第 {n} 轮',
+      'game.turn': '轮到 {name}',
+      'game.chips': '筹码',
+      'game.you': '你',
+      'game.blind': '闷牌',
+      'game.seen': '已看牌',
+      'game.folded': '已弃牌',
+      'game.offline': '离线',
+      'game.cards': '你的牌',
+      'game.notSeen': '还没看牌',
+      'game.look': '看牌',
+      'game.call': '跟注 {cost}',
+      'game.raise': '加注 {cost}',
+      'game.fold': '弃牌',
+      'game.compare': '比牌',
+      'game.compareWith': '比牌对象',
+      'game.start': '开始对局',
+      'game.next': '下一局',
+      'game.result': '本局结果',
+      'game.winners': '赢家：{names}',
+      'game.copy': '复制房间信息',
+      'game.copied': '已复制',
+      'game.share': '房间 {code} · {url}',
+      'game.publicShare': '公网房间 {code} · {url}',
+      'game.hide': '隐藏',
+      'game.overlayHint': '游戏未连接：打开 设置 → 游戏 创建或加入房间',
+      'game.error': '错误：{message}',
+      'game.tunnelCmd': '隧道命令：cloudflared tunnel --url http://localhost:{port}',
       'settings.subtitle': '摸鱼套件：小说只是第一个模块',
       'settings.bookshelf': '书架',
       'settings.importPath': 'TXT 文件绝对路径，例如 ~/novels/book.txt',
@@ -306,11 +364,68 @@ window.__ModuleLoader__.load({
       'settings.title': 'Slack Off to Earn',
       'modules.title': 'Slack modules',
       'modules.novel': 'Novels',
+      'modules.game': 'Game',
+      'modules.more': 'More',
       'modules.stocks': 'Stocks',
       'modules.web': 'Web',
       'modules.video': 'Video',
       'modules.comingSoon': 'soon',
       'modules.placeholder': 'This slack module is still in development. The novel module is ready, and future modules will reuse this shell.',
+      'game.title': 'Game · Zha Jin Hua',
+      'game.hint': 'LAN play: the host machine is the server. Toggle the minimal overlay with Cmd/Ctrl + Shift + G; the boss key hides it instantly.',
+      'game.playerName': 'Player name',
+      'game.port': 'Local port',
+      'game.publicUrl': 'Public tunnel URL (optional)',
+      'game.publicHint': 'For internet play, expose the local port with cloudflared/ngrok and share the public URL with friends.',
+      'game.create': 'Create room',
+      'game.creating': 'Creating…',
+      'game.address': 'Server address',
+      'game.roomCode': 'Room code',
+      'game.join': 'Join',
+      'game.joining': 'Joining…',
+      'game.rooms': 'Open rooms',
+      'game.noRooms': 'No open rooms',
+      'game.refresh': 'Refresh',
+      'game.joinRoom': 'Join',
+      'game.leave': 'Leave room',
+      'game.connecting': 'Connecting…',
+      'game.connectFailed': 'Connection failed',
+      'game.noSession': 'Not in a room',
+      'game.room': 'Room',
+      'game.status': 'Status',
+      'game.waiting': 'Waiting',
+      'game.playing': 'Playing',
+      'game.settled': 'Settled',
+      'game.pot': 'Pot',
+      'game.bet': 'Bet',
+      'game.round': 'Round {n}',
+      'game.turn': "{name}'s turn",
+      'game.chips': 'Chips',
+      'game.you': 'you',
+      'game.blind': 'blind',
+      'game.seen': 'seen',
+      'game.folded': 'folded',
+      'game.offline': 'offline',
+      'game.cards': 'Your cards',
+      'game.notSeen': 'not looked yet',
+      'game.look': 'Look',
+      'game.call': 'Call {cost}',
+      'game.raise': 'Raise {cost}',
+      'game.fold': 'Fold',
+      'game.compare': 'Compare',
+      'game.compareWith': 'Compare with',
+      'game.start': 'Start hand',
+      'game.next': 'Next hand',
+      'game.result': 'Result',
+      'game.winners': 'Winners: {names}',
+      'game.copy': 'Copy room info',
+      'game.copied': 'Copied',
+      'game.share': 'Room {code} · {url}',
+      'game.publicShare': 'Public room {code} · {url}',
+      'game.hide': 'Hide',
+      'game.overlayHint': 'Not in a game: open Settings → Game to create or join a room',
+      'game.error': 'Error: {message}',
+      'game.tunnelCmd': 'Tunnel: cloudflared tunnel --url http://localhost:{port}',
       'settings.subtitle': 'A slack-off suite; novels are only the first module',
       'settings.bookshelf': 'Bookshelf',
       'settings.importPath': 'Absolute path to a TXT file, e.g. ~/novels/book.txt',
@@ -630,6 +745,20 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 .my-textarea{min-height:96px;padding:8px 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;resize:vertical}
 .my-textarea:focus{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-1px}
 .my-num{width:96px;height:30px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:12.5px}
+.my-game-panel{display:flex;flex-direction:column;gap:8px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px;background:var(--dsw-alias-bg-base);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5}
+.my-game-overlay{position:fixed;right:16px;bottom:64px;width:min(390px,calc(100vw - 32px));z-index:46;box-shadow:var(--dsw-elevation-panel)}
+.my-game-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.my-game-title{font-weight:600;color:var(--dsw-alias-label-primary)}
+.my-game-meta{color:var(--dsw-alias-label-secondary);font-size:11.5px}
+.my-game-players{display:flex;flex-direction:column;gap:2px}
+.my-game-player{display:flex;align-items:center;gap:8px;padding:2px 4px;border-radius:4px;color:var(--dsw-alias-label-secondary)}
+.my-game-player.turn{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
+.my-game-player.me{color:var(--dsw-alias-label-primary)}
+.my-game-player-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.my-game-cards{color:var(--dsw-alias-state-success-primary);font-weight:600}
+.my-game-actions{display:flex;gap:4px;flex-wrap:wrap}
+.my-game-log{max-height:90px;overflow:auto;color:var(--dsw-alias-label-secondary);font-size:11px;white-space:pre-wrap}
+.my-game-result{color:var(--dsw-alias-state-success-primary);font-weight:600}
 .my-error{color:var(--dsw-alias-state-error-primary);font-size:12px}
 .my-detail{border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--dsw-alias-bg-base)}
 .my-detail-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -725,6 +854,210 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [snapshot, setSnapshot] = React.useState(() => source.get());
       React.useEffect(() => source.subscribe(() => setSnapshot(source.get())), [source]);
       return snapshot;
+    }
+
+    function readGamePrefs() {
+      try {
+        const raw = localStorage.getItem(GAME_STORAGE_KEY);
+        if (raw === null) return {};
+        const parsed = JSON.parse(raw);
+        return parsed !== null && typeof parsed === 'object' ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    const gameStore = createStore(Object.assign({
+      playerName: '摸鱼工',
+      serverPort: 17890,
+      publicUrl: '',
+      session: null,
+      snapshot: null,
+      connection: 'idle',
+      error: '',
+      rooms: null,
+      lobbyAddress: '',
+      overlayOpen: false,
+    }, readGamePrefs()));
+
+    function setGamePrefs(patch) {
+      gameStore.set(patch);
+      try {
+        const current = gameStore.get();
+        localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify({
+          playerName: current.playerName,
+          serverPort: current.serverPort,
+          publicUrl: current.publicUrl,
+        }));
+      } catch {
+        /* storage is optional */
+      }
+    }
+
+    function normalizeGameBase(value) {
+      let text = String(value ?? '').trim();
+      if (text === '') return '';
+      if (!/^https?:\/\//i.test(text)) text = `http://${text}`;
+      return text.replace(/\/+$/, '');
+    }
+
+    async function gameRequest(baseUrl, path, body, method = 'GET') {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method,
+        headers: body === undefined ? {} : { 'content-type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      let payload = null;
+      try { payload = await response.json(); } catch { /* empty body */ }
+      if (!response.ok) throw new Error(payload?.error ?? `HTTP ${response.status}`);
+      return payload;
+    }
+
+    let gameSource;
+    function closeGameSource() {
+      if (gameSource !== undefined) {
+        try { gameSource.close(); } catch { /* already closed */ }
+        gameSource = undefined;
+      }
+    }
+
+    function connectGameSession(session) {
+      closeGameSource();
+      gameStore.set({ session, connection: 'connecting', error: '', snapshot: null });
+      if (typeof EventSource !== 'function') {
+        gameStore.set({ connection: 'error', error: '当前环境不支持 EventSource' });
+        return;
+      }
+      const source = new EventSource(`${session.baseUrl}/api/rooms/${session.roomCode}/events?token=${encodeURIComponent(session.token)}`);
+      source.addEventListener('state', (event) => {
+        try {
+          gameStore.set({ snapshot: JSON.parse(event.data), connection: 'online', error: '' });
+        } catch {
+          /* ignore malformed frame */
+        }
+      });
+      source.onerror = () => {
+        gameStore.set({ connection: 'error' });
+      };
+      gameSource = source;
+    }
+
+    async function createGameRoom() {
+      const current = gameStore.get();
+      gameStore.set({ error: '' });
+      try {
+        const data = await postJson('moyu/game/create', {
+          playerName: current.playerName,
+          port: Number(current.serverPort) || 17890,
+        });
+        const baseUrl = `http://127.0.0.1:${data.share.port}`;
+        const session = {
+          baseUrl,
+          roomCode: data.roomCode,
+          token: data.token,
+          seat: data.seat,
+          share: data.share,
+          local: true,
+        };
+        gameStore.set({ session, snapshot: data.state ?? null, rooms: null });
+        connectGameSession(session);
+        return session;
+      } catch (failure) {
+        gameStore.set({ error: String(failure?.message ?? failure) });
+        throw failure;
+      }
+    }
+
+    async function joinGameRoom(address, roomCode, playerName) {
+      const baseUrl = normalizeGameBase(address);
+      const code = String(roomCode ?? '').trim().toUpperCase();
+      if (baseUrl === '' || code === '') throw new Error('请填写服务器地址和房间号');
+      gameStore.set({ error: '' });
+      const data = await gameRequest(baseUrl, `/api/rooms/${encodeURIComponent(code)}/join`, {
+        name: playerName,
+      }, 'POST');
+      const session = {
+        baseUrl,
+        roomCode: data.roomCode,
+        token: data.token,
+        seat: data.seat,
+        share: data.share,
+        local: baseUrl.includes('127.0.0.1') || baseUrl.includes('localhost'),
+      };
+      gameStore.set({ session, snapshot: data.state ?? null, rooms: null });
+      connectGameSession(session);
+      return session;
+    }
+
+    async function leaveGameRoom() {
+      const session = gameStore.get().session;
+      closeGameSource();
+      gameStore.set({ session: null, snapshot: null, connection: 'idle', error: '', overlayOpen: false });
+      if (session !== null && session !== undefined) {
+        try {
+          await gameRequest(session.baseUrl, `/api/rooms/${session.roomCode}/leave`, { token: session.token }, 'POST');
+        } catch {
+          /* leaving is best effort */
+        }
+      }
+    }
+
+    async function gameAction(action) {
+      const session = gameStore.get().session;
+      if (session === null || session === undefined) return;
+      try {
+        await gameRequest(session.baseUrl, `/api/rooms/${session.roomCode}/action`, { token: session.token, action }, 'POST');
+        gameStore.set({ error: '' });
+      } catch (failure) {
+        gameStore.set({ error: String(failure?.message ?? failure) });
+      }
+    }
+
+    async function gameHostAction(kind) {
+      const session = gameStore.get().session;
+      if (session === null || session === undefined) return;
+      try {
+        await gameRequest(session.baseUrl, `/api/rooms/${session.roomCode}/${kind}`, { token: session.token }, 'POST');
+        gameStore.set({ error: '' });
+      } catch (failure) {
+        gameStore.set({ error: String(failure?.message ?? failure) });
+      }
+    }
+
+    async function loadGameRooms(address) {
+      const baseUrl = normalizeGameBase(address);
+      if (baseUrl === '') return;
+      try {
+        const data = await gameRequest(baseUrl, '/api/rooms');
+        gameStore.set({ rooms: data.rooms ?? [], lobbyAddress: baseUrl, error: '' });
+      } catch (failure) {
+        gameStore.set({ rooms: [], lobbyAddress: baseUrl, error: String(failure?.message ?? failure) });
+      }
+    }
+
+    function toggleGameOverlay() {
+      gameStore.set({ overlayOpen: !gameStore.get().overlayOpen });
+    }
+
+    function copyText(text) {
+      try {
+        if (navigator.clipboard !== undefined) {
+          void navigator.clipboard.writeText(text);
+          return;
+        }
+      } catch {
+        /* fall through */
+      }
+      try {
+        const area = document.createElement('textarea');
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand('copy');
+        area.remove();
+      } catch {
+        /* clipboard is optional */
+      }
     }
 
     function makeT(locale) {
@@ -2650,6 +2983,265 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
     }
 
     // ------------------------------------------------------------------
+    // game module
+    // ------------------------------------------------------------------
+
+    const GAME_SUITS = { S: '♠', H: '♥', D: '♦', C: '♣' };
+    const GAME_RANKS = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
+
+    function gameCardText(card) {
+      return `${GAME_SUITS[card.suit] ?? card.suit}${GAME_RANKS[card.rank] ?? card.rank}`;
+    }
+
+    function GamePanel({ t, compact, onClose }) {
+      const game = useStore(gameStore);
+      const snapshot = game.snapshot;
+      const session = game.session;
+      const [compareTarget, setCompareTarget] = React.useState('');
+
+      if (session === null || session === undefined) {
+        return h('div', { className: 'my-game-panel' },
+          h('div', { className: 'my-game-meta' }, t('game.noSession')));
+      }
+      if (snapshot === null || snapshot === undefined) {
+        return h('div', { className: 'my-game-panel' },
+          h('div', { className: 'my-game-title' }, `${t('game.room')} ${session.roomCode}`),
+          h('div', { className: 'my-game-meta' }, game.connection === 'error'
+            ? (game.error === '' ? t('game.connectFailed') : game.error)
+            : t('game.connecting')));
+      }
+
+      const me = snapshot.players.find((player) => player.seat === snapshot.yourSeat);
+      const playing = snapshot.status === 'playing';
+      const myTurn = playing && snapshot.turnSeat === snapshot.yourSeat;
+      const seen = snapshot.yourSeen === true;
+      const multiplier = seen ? (snapshot.config?.seenMultiplier ?? 2) : 1;
+      const callCost = snapshot.currentBet * multiplier;
+      const raiseCost = (snapshot.currentBet + (snapshot.config?.raiseStep ?? 10)) * multiplier;
+      const activeOthers = snapshot.players.filter((player) => player.seat !== snapshot.yourSeat && player.inHand && !player.folded);
+      const owner = snapshot.ownerSeat === snapshot.yourSeat;
+      const statusText = snapshot.status === 'waiting'
+        ? t('game.waiting')
+        : snapshot.status === 'playing' ? t('game.playing') : t('game.settled');
+      const turnName = snapshot.players.find((player) => player.seat === snapshot.turnSeat)?.name ?? '-';
+      const shareUrls = session.share?.lanUrls ?? [];
+      const publicUrl = String(game.publicUrl ?? '').trim();
+      const shareUrl = publicUrl !== '' ? publicUrl : (shareUrls[0] ?? session.baseUrl);
+      const shareText = `${session.roomCode} ${shareUrl}`;
+
+      const players = snapshot.players.map((player) => {
+        const marks = [];
+        if (player.seat === snapshot.yourSeat) marks.push(t('game.you'));
+        if (player.folded) marks.push(t('game.folded'));
+        else if (player.seen) marks.push(t('game.seen'));
+        else if (playing) marks.push(t('game.blind'));
+        if (!player.online) marks.push(t('game.offline'));
+        return h('div', {
+          key: player.seat,
+          className: 'my-game-player'
+            + (player.seat === snapshot.turnSeat && playing ? ' turn' : '')
+            + (player.seat === snapshot.yourSeat ? ' me' : ''),
+        },
+          h('span', null, `#${player.seat + 1}`),
+          h('span', { className: 'my-game-player-name' }, player.name),
+          h('span', null, `${t('game.chips')} ${player.chips}`),
+          h('span', null, marks.join('·')));
+      });
+
+      const actions = [];
+      if (playing) {
+        actions.push(h('button', {
+          key: 'look',
+          className: 'my-btn',
+          disabled: !myTurn || seen,
+          onClick: () => { void gameAction('look'); },
+        }, t('game.look')));
+        actions.push(h('button', {
+          key: 'call',
+          className: 'my-btn primary',
+          disabled: !myTurn,
+          onClick: () => { void gameAction('call'); },
+        }, t('game.call', { cost: callCost })));
+        actions.push(h('button', {
+          key: 'raise',
+          className: 'my-btn',
+          disabled: !myTurn,
+          onClick: () => { void gameAction('raise'); },
+        }, t('game.raise', { cost: raiseCost })));
+        actions.push(h('button', {
+          key: 'fold',
+          className: 'my-btn',
+          disabled: !myTurn,
+          onClick: () => { void gameAction('fold'); },
+        }, t('game.fold')));
+        if (snapshot.round >= (snapshot.config?.compareFromRound ?? 2) && activeOthers.length > 0) {
+          actions.push(h('select', {
+            key: 'compare-target',
+            className: 'my-select my-select-sm',
+            value: compareTarget,
+            onChange: (event) => setCompareTarget(event.currentTarget.value),
+          }, activeOthers.map((player) => h('option', { key: player.seat, value: String(player.seat) }, `#${player.seat + 1} ${player.name}`))));
+          actions.push(h('button', {
+            key: 'compare',
+            className: 'my-btn',
+            disabled: !myTurn,
+            onClick: () => {
+              const target = compareTarget === '' ? activeOthers[0].seat : Number(compareTarget);
+              void gameAction({ kind: 'compare', target });
+            },
+          }, t('game.compare')));
+        }
+      }
+      if (owner) {
+        if (snapshot.status !== 'playing') {
+          actions.push(h('button', {
+            key: 'start',
+            className: 'my-btn primary',
+            disabled: snapshot.players.filter((player) => player.online).length < 2,
+            onClick: () => { void gameHostAction(snapshot.status === 'settled' ? 'next' : 'start'); },
+          }, snapshot.status === 'settled' ? t('game.next') : t('game.start')));
+        }
+      }
+
+      const result = snapshot.result;
+      return h('div', { className: `my-game-panel${compact ? ' compact' : ''}` },
+        h('div', { className: 'my-game-head' },
+          h('span', { className: 'my-game-title' }, `${t('game.room')} ${session.roomCode}`),
+          h('span', { className: 'my-game-meta' }, `${statusText} · ${game.connection === 'online' ? '●' : '○'}`),
+          compact && typeof onClose === 'function'
+            ? h('button', { className: 'my-btn', onClick: onClose }, t('game.hide'))
+            : null),
+        h('div', { className: 'my-game-meta' },
+          `${t('game.pot')} ${snapshot.pot} · ${t('game.bet')} ${snapshot.currentBet} · ${t('game.round', { n: snapshot.round })}`),
+        playing ? h('div', { className: 'my-game-meta' }, t('game.turn', { name: turnName })) : null,
+        h('div', { className: 'my-game-players' }, players),
+        h('div', { className: 'my-game-cards' },
+          `${t('game.cards')}: ${snapshot.yourCards.length > 0 ? snapshot.yourCards.map(gameCardText).join(' ') : t('game.notSeen')}`),
+        result === null || result === undefined
+          ? null
+          : h('div', { className: 'my-game-result' },
+            `${t('game.result')} · ${t('game.winners', {
+              names: result.winners.map((seat) => snapshot.players.find((player) => player.seat === seat)?.name ?? `#${seat + 1}`).join('、'),
+            })}`),
+        actions.length === 0 ? null : h('div', { className: 'my-game-actions' }, actions),
+        game.error === '' ? null : h('div', { className: 'my-error' }, t('game.error', { message: game.error })),
+        h('div', { className: 'my-game-log' }, (snapshot.log ?? []).slice(-6).join('\n')),
+        h('div', { className: 'my-game-meta' },
+          `${t('game.share', { code: session.roomCode, url: shareUrl })} `,
+          h('button', { className: 'my-btn', onClick: () => copyText(shareText) }, t('game.copy'))));
+    }
+
+    function GameOverlay({ locale }) {
+      const t = useT(locale);
+      const game = useStore(gameStore);
+      if (!game.overlayOpen) return null;
+      return h('div', { className: 'my-game-overlay' },
+        game.session === null || game.session === undefined
+          ? h('div', { className: 'my-game-panel' },
+            h('div', { className: 'my-game-meta' }, t('game.overlayHint')),
+            h('button', { className: 'my-btn', onClick: () => gameStore.set({ overlayOpen: false }) }, t('game.hide')))
+          : h(GamePanel, { t, compact: true, onClose: () => gameStore.set({ overlayOpen: false }) }));
+    }
+
+    function GameCard({ t }) {
+      const game = useStore(gameStore);
+      const [address, setAddress] = React.useState(game.lobbyAddress || `http://127.0.0.1:${game.serverPort}`);
+      const [roomCode, setRoomCode] = React.useState('');
+      const [busy, setBusy] = React.useState(false);
+
+      async function create() {
+        if (busy) return;
+        setBusy(true);
+        try { await createGameRoom(); } catch { /* store carries the error */ } finally { setBusy(false); }
+      }
+
+      async function join(code) {
+        if (busy) return;
+        setBusy(true);
+        try { await joinGameRoom(address, code, game.playerName); } catch (failure) { gameStore.set({ error: String(failure?.message ?? failure) }); } finally { setBusy(false); }
+      }
+
+      async function refresh() {
+        await loadGameRooms(address);
+      }
+
+      const session = game.session;
+      const share = session?.share;
+      const lanUrl = share?.lanUrls?.[0] ?? '';
+      const publicUrl = String(game.publicUrl ?? '').trim();
+
+      return h('div', { className: 'my-card' },
+        h('h3', null, t('game.title')),
+        h('div', { className: 'my-sub' }, t('game.hint')),
+        h('div', { className: 'my-form-grid' },
+          h('div', { className: 'my-field' },
+            h('span', { className: 'my-field-label' }, t('game.playerName')),
+            h('input', {
+              className: 'my-field-input',
+              value: game.playerName,
+              onChange: (event) => setGamePrefs({ playerName: event.currentTarget.value }),
+            })),
+          h('div', { className: 'my-field' },
+            h('span', { className: 'my-field-label' }, t('game.port')),
+            h('input', {
+              className: 'my-field-input',
+              type: 'number',
+              value: game.serverPort,
+              onChange: (event) => setGamePrefs({ serverPort: Math.max(1024, Number(event.currentTarget.value) || 17890) }),
+            }))),
+        h('div', { className: 'my-field' },
+          h('span', { className: 'my-field-label' }, t('game.publicUrl')),
+          h('input', {
+            className: 'my-field-input',
+            value: game.publicUrl,
+            placeholder: 'https://xxxx.trycloudflare.com',
+            onChange: (event) => setGamePrefs({ publicUrl: event.currentTarget.value }),
+          })),
+        h('div', { className: 'my-sub' }, t('game.publicHint')),
+        h('div', { className: 'my-sub' }, t('game.tunnelCmd', { port: game.serverPort })),
+
+        session === null || session === undefined
+          ? h(React.Fragment, null,
+            h('div', { className: 'my-row' },
+              h('button', { className: 'my-btn primary', disabled: busy, onClick: create },
+                busy ? t('game.creating') : t('game.create')),
+              h('button', { className: 'my-btn', onClick: refresh }, t('game.refresh'))),
+            h('div', { className: 'my-row' },
+              h('input', {
+                className: 'my-input-path',
+                value: address,
+                placeholder: t('game.address'),
+                onChange: (event) => setAddress(event.currentTarget.value),
+              }),
+              h('input', {
+                className: 'my-input-path',
+                style: { maxWidth: '120px' },
+                value: roomCode,
+                placeholder: t('game.roomCode'),
+                onChange: (event) => setRoomCode(event.currentTarget.value.toUpperCase()),
+              }),
+              h('button', { className: 'my-btn', disabled: busy, onClick: () => join(roomCode) },
+                busy ? t('game.joining') : t('game.join'))),
+            h('div', { className: 'my-form-label' }, t('game.rooms')),
+            game.rooms === null
+              ? null
+              : (game.rooms.length === 0
+                ? h('div', { className: 'my-sub' }, t('game.noRooms'))
+                : game.rooms.map((room) => h('div', { key: room.roomCode, className: 'my-book' },
+                  h('div', { className: 'my-book-main' },
+                    h('div', { className: 'my-book-title' }, `${room.roomCode} · ${room.players}/${room.maxPlayers}`),
+                    h('div', { className: 'my-book-meta' }, `${t('game.waiting')} · ${t('game.bet')} ${room.ante}`)),
+                  h('button', { className: 'my-btn', onClick: () => join(room.roomCode) }, t('game.joinRoom'))))))
+          : h(React.Fragment, null,
+            h(GamePanel, { t }),
+            h('div', { className: 'my-row' },
+              h('button', { className: 'my-btn', onClick: () => { void leaveGameRoom(); } }, t('game.leave')),
+              share === undefined ? null : h('span', { className: 'my-sub' },
+                `${t('game.share', { code: session.roomCode, url: lanUrl || session.baseUrl })}${publicUrl === '' ? '' : ` · ${t('game.publicShare', { code: session.roomCode, url: publicUrl })}`}`))),
+        game.error === '' ? null : h('div', { className: 'my-error' }, game.error));
+    }
+
+    // ------------------------------------------------------------------
     // settings section
     // ------------------------------------------------------------------
 
@@ -3964,9 +4556,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 
       const modules = [
         ['novel', t('modules.novel'), true],
-        ['stocks', t('modules.stocks'), false],
-        ['web', t('modules.web'), false],
-        ['video', t('modules.video'), false],
+        ['game', t('modules.game'), true],
+        ['more', t('modules.more'), false],
       ];
       const tabs = [
         ['shelf', t('settings.bookshelf')],
@@ -4022,11 +4613,14 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           h('div', { style: { display: tab === 'prefs' ? 'block' : 'none' } },
             h(PreferencesCard, { snap, t }))),
 
-        activeModule === 'novel'
-          ? null
-          : h('div', { className: 'my-card' },
+        activeModule === 'game'
+          ? h(GameCard, { t })
+          : null,
+        activeModule === 'more'
+          ? h('div', { className: 'my-card' },
             h('h3', null, activeModuleLabel),
-            h('div', { className: 'my-sub' }, t('modules.placeholder'))));
+            h('div', { className: 'my-sub' }, t('modules.placeholder')))
+          : null);
     }
 
     // ------------------------------------------------------------------
@@ -4052,6 +4646,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           },
           boss() {
             store.set({ active: false, jumpOpen: false });
+            gameStore.set({ overlayOpen: false });
+          },
+          toggleGame() {
+            toggleGameOverlay();
           },
           jump() { store.set({ jumpOpen: true, tocOpen: false }); },
           openToc() { store.set({ tocOpen: true, jumpOpen: false }); },
@@ -4127,6 +4725,12 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           order: -3,
         }, (props) => h(EntryButton, Object.assign({}, props, { api, locale: ctx.locale }))));
 
+        ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+          name: 'shell.overlay',
+          id: 'moyu.game',
+          order: 60,
+        }, (props) => h(GameOverlay, Object.assign({}, props, { locale: ctx.locale }))));
+
         ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section',
           id: 'moyu',
@@ -4148,6 +4752,11 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
             if (event.shiftKey && !event.altKey && event.code === 'KeyM') {
               event.preventDefault();
               api.boss();
+              return;
+            }
+            if (event.shiftKey && !event.altKey && event.code === 'KeyG') {
+              event.preventDefault();
+              toggleGameOverlay();
               return;
             }
             if (event.altKey || event.shiftKey) return;
@@ -4233,6 +4842,20 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
             aliases: ['chapter list', 'contents'],
             defaults: profileDefaults({ code: 'KeyL', modifiers: ['primary'] }),
             resolve: () => ({ status: 'handled', run: () => api.openToc() }),
+          }, common)));
+          scope.effect(() => register(Object.assign({
+            id: 'moyu.game',
+            label: () => t('game.title'),
+            aliases: ['game overlay', 'zha jin hua', 'moyu game'],
+            defaults: {
+              'desktop:macos': { code: 'KeyG', modifiers: ['primary', 'shift'] },
+              'web:macos': { code: 'KeyG', modifiers: ['primary', 'shift'] },
+              'desktop:windows': { code: 'KeyG', modifiers: ['control', 'shift'] },
+              'web:windows': { code: 'KeyG', modifiers: ['control', 'shift'] },
+              'desktop:linux': { code: 'KeyG', modifiers: ['control', 'shift'] },
+              'web:linux': { code: 'KeyG', modifiers: ['control', 'shift'] },
+            },
+            resolve: () => ({ status: 'handled', run: () => toggleGameOverlay() }),
           }, common)));
           scope.effect(() => register(Object.assign({
             id: 'moyu.boss',

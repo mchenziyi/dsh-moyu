@@ -159,12 +159,13 @@ const settingsIds = slotRegistrations
   .filter((entry) => entry.registration.name === 'settings.section')
   .map((entry) => entry.registration.id);
 const names = slotRegistrations.map((entry) => entry.registration.name);
-for (const expected of ['conversation.composer.dock', 'conversation.session.header.utilities', 'settings.section', 'sidebar.right.pane.tab']) {
+for (const expected of ['conversation.composer.dock', 'conversation.session.header.utilities', 'settings.section', 'sidebar.right.pane.tab', 'shell.overlay']) {
   if (!names.includes(expected)) failures.push(`missing slot ${expected}`);
 }
-if (shortcuts.length !== 7) failures.push(`shortcuts ${shortcuts.length}`);
+if (shortcuts.length !== 8) failures.push(`shortcuts ${shortcuts.length}`);
 if (!shortcuts.some((command) => command.id === 'moyu.boss')) failures.push('boss shortcut missing');
 if (!shortcuts.some((command) => command.id === 'moyu.toc')) failures.push('toc shortcut missing');
+if (!shortcuts.some((command) => command.id === 'moyu.game')) failures.push('game shortcut missing');
 const byId = (id) => shortcuts.find((command) => command.id === id);
 if (byId('moyu.nextPage')?.defaults?.['web:macos']?.code !== 'ArrowDown') failures.push('nextPage binding');
 if (byId('moyu.prevPage')?.defaults?.['web:macos']?.code !== 'ArrowUp') failures.push('prevPage binding');
