@@ -153,6 +153,7 @@ window.__ModuleLoader__.load({
       'find.sourceMissing': '这个结果对应的书源已被删除',
       'find.addedBackground': '已加入书架「{name}」，目录正在后台读取；完成后可在书架查看。',
       'find.detailPreview': '目录预览：已读取 {count} 章；完整目录会在加入书架后继续读取。',
+      'find.detailPreviewFull': '目录预览：第 1/{pages} 页，已读取 {count} 章（共约 {total} 章）；完整目录会在加入书架后继续读取。',
       'find.noSearchable': '现有书源都没有搜索规则：去「书源」里编辑补一个，或用下面的书籍页 URL 直接加入。',
       'shelf.emptyHint': '书架是空的：导入本地 TXT，或先添加在线书源再找书。',
       'shelf.goSources': '去添加书源',
@@ -349,6 +350,7 @@ window.__ModuleLoader__.load({
       'find.sourceMissing': 'The source for this result has been deleted',
       'find.addedBackground': 'Added "{name}" to the shelf; contents are loading in the background.',
       'find.detailPreview': 'Contents preview: {count} chapters loaded; the full list continues after adding.',
+      'find.detailPreviewFull': 'Contents preview: page 1/{pages}, {count} chapters loaded (~{total} total); the full list continues after adding.',
       'find.noSearchable': 'None of your sources has a search rule: edit one under “Sources”, or add a book by its page URL below.',
       'shelf.emptyHint': 'The shelf is empty: import a local TXT, or add an online source and find a book.',
       'shelf.goSources': 'Add a source',
@@ -939,7 +941,23 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const response = await proxyFetch(bookUrl, signal);
       const doc = parseHtml(response.text);
       const parsed = probeToc(source.toc, doc, response.finalUrl);
-      return { title: parsed.title, chapters: parsed.chapters, complete: false };
+      const text = doc.body?.textContent ?? '';
+      const chapterMatch = /共\s*(\d+)\s*章/.exec(text);
+      let totalPages = 0;
+      for (const node of doc.querySelectorAll('.pagination, .pages')) {
+        const pageMatch = /(\d+)\s*\/\s*(\d+)/.exec(node.textContent ?? '');
+        if (pageMatch !== null) {
+          totalPages = Number(pageMatch[2]);
+          break;
+        }
+      }
+      return {
+        title: parsed.title,
+        chapters: parsed.chapters,
+        complete: false,
+        totalChapters: chapterMatch === null ? 0 : Number(chapterMatch[1]),
+        totalPages,
+      };
     }
 
     function detectChapterPageCount(doc) {
@@ -2714,7 +2732,13 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
               detailBusy ? h('div', { className: 'my-sub' }, detailProgress || t('find.detailLoading')) : null,
               detailError === '' ? null : h('div', { className: 'my-error' }, detailError),
               detailToc === null ? null : h('div', null,
-                h('div', { className: 'my-sub' }, t('find.detailPreview', { count: detailToc.chapters.length })),
+                h('div', { className: 'my-sub' }, detailToc.totalPages > 0 && detailToc.totalChapters > 0
+                  ? t('find.detailPreviewFull', {
+                    pages: detailToc.totalPages,
+                    count: detailToc.chapters.length,
+                    total: detailToc.totalChapters,
+                  })
+                  : t('find.detailPreview', { count: detailToc.chapters.length })),
                 h('div', { className: 'my-detail-chapters' }, detailToc.chapters.slice(0, 5).map((chapter) => h('div', { key: chapter.url }, chapter.title))),
                 h('button', { className: 'my-btn primary', disabled: detailBusy, onClick: () => addResult(detailResult, detailToc) }, t('find.detailAdd')))));
 
