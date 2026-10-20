@@ -193,6 +193,8 @@ window.__ModuleLoader__.load({
       'search.empty': '没有结果',
       'search.failed': '搜索失败：{message}',
       'direct.title': '从书籍页 URL 加入',
+      'direct.toggle': '手动添加书籍（高级）',
+      'direct.hide': '收起手动添加',
       'direct.hint': '站点没有搜索规则时，可以直接粘贴书籍页 URL，把这本书加入书架。',
       'direct.url': '书籍页 URL，例如 https://site/book/123/',
       'direct.add': '加入书架',
@@ -391,6 +393,8 @@ window.__ModuleLoader__.load({
       'search.empty': 'No results',
       'search.failed': 'Search failed: {message}',
       'direct.title': 'Add by book page URL',
+      'direct.toggle': 'Add a book by URL (advanced)',
+      'direct.hide': 'Hide manual add',
       'direct.hint': 'When a site has no search rule, paste a book page URL to add that book to the shelf.',
       'direct.url': 'Book page URL, e.g. https://site/book/123/',
       'direct.add': 'Add to shelf',
@@ -2644,6 +2648,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [directBusy, setDirectBusy] = React.useState(false);
       const [directError, setDirectError] = React.useState('');
       const [directNotice, setDirectNotice] = React.useState('');
+      const [showDirect, setShowDirect] = React.useState(false);
       const handledRequest = React.useRef(0);
 
       const effectiveDirectSourceId = sources.some((source) => source.id === directSourceId)
@@ -2837,28 +2842,34 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           : h(React.Fragment, null,
             searchBlock,
             h('div', { className: 'my-form-section' },
-              h('div', { className: 'my-form-label' }, t('direct.title')),
-              h('div', { className: 'my-sub' }, t('direct.hint')),
-              h('div', { className: 'my-row' },
-                h('select', {
-                  className: 'my-select',
-                  value: effectiveDirectSourceId,
-                  onChange: (event) => setDirectSourceId(event.currentTarget.value),
-                }, sources.map((source) => h('option', { key: source.id, value: source.id }, source.name))),
-                h('input', {
-                  className: 'my-input-path',
-                  value: directUrl,
-                  placeholder: t('direct.url'),
-                  onChange: (event) => setDirectUrl(event.currentTarget.value),
-                  onKeyDown: (event) => { if (event.key === 'Enter') addByDirectUrl(); },
-                }),
-                h('button', {
-                  className: 'my-btn primary',
-                  disabled: directBusy,
-                  onClick: addByDirectUrl,
-                }, directBusy ? t('direct.adding') : t('direct.add'))),
-              directError === '' ? null : h('div', { className: 'my-error' }, directError),
-              directNotice === '' ? null : h('div', { className: 'my-sub' }, directNotice))));
+              h('button', {
+                className: 'my-btn',
+                onClick: () => setShowDirect((value) => !value),
+              }, showDirect ? t('direct.hide') : t('direct.toggle')),
+              showDirect
+                ? h('div', null,
+                  h('div', { className: 'my-sub' }, t('direct.hint')),
+                  h('div', { className: 'my-row' },
+                    h('select', {
+                      className: 'my-select',
+                      value: effectiveDirectSourceId,
+                      onChange: (event) => setDirectSourceId(event.currentTarget.value),
+                    }, sources.map((source) => h('option', { key: source.id, value: source.id }, source.name))),
+                    h('input', {
+                      className: 'my-input-path',
+                      value: directUrl,
+                      placeholder: t('direct.url'),
+                      onChange: (event) => setDirectUrl(event.currentTarget.value),
+                      onKeyDown: (event) => { if (event.key === 'Enter') addByDirectUrl(); },
+                    }),
+                    h('button', {
+                      className: 'my-btn primary',
+                      disabled: directBusy,
+                      onClick: addByDirectUrl,
+                    }, directBusy ? t('direct.adding') : t('direct.add'))),
+                  directError === '' ? null : h('div', { className: 'my-error' }, directError),
+                  directNotice === '' ? null : h('div', { className: 'my-sub' }, directNotice))
+                : null)));
     }
 
     function ShelfCard({ snap, t, onGoSources, onGoFind }) {
@@ -3052,7 +3063,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const tr = useT(locale);
       t = t ?? tr;
       const snap = useStore(store);
-      const [tab, setTab] = React.useState('shelf');
+      const [tab, setTab] = React.useState(() => (snap.settings.sources.length === 0 ? 'sources' : 'shelf'));
       const [findRequest, setFindRequest] = React.useState(null);
 
       const tabs = [
