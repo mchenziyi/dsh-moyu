@@ -934,7 +934,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
     const gameStore = createStore(Object.assign({
       playerName: '摸鱼工',
       serverPort: 17890,
-      cloudUrl: '',
+      cloudUrl: 'https://moyu-zjh-pages.pages.dev',
       mode: 'cloud',
       publicUrl: '',
       tunnelMode: 'quick',

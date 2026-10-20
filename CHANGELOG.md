@@ -1,5 +1,13 @@
 # 变更记录
 
+## 0.11.1 — 2026-10-20
+
+- 部署 Cloudflare 托管版：Worker `moyu-zjh` + Durable Object；
+- 新增 Pages 代理 `moyu-zjh-pages`：部分网络会重置 `*.workers.dev` 的 TLS，`*.pages.dev` 可访问，因此 DSH 插件默认连接 Pages 代理；
+- 插件游戏默认切到 Cloudflare 模式，默认地址 `https://moyu-zjh-pages.pages.dev`；
+- 线上验证：创建/加入/开始/看牌/弃牌/结算 + WebSocket 通过 Pages 代理正常；
+- 本地局域网模式继续保留。
+
 ## 0.11.0 — 2026-10-20
 
 - 新增 **Cloudflare 托管模式**（独立 `game-worker/`，Worker + Durable Object）。

@@ -46,21 +46,30 @@ WebSocket 消息：
 { "type": "error", "error": "..." }
 ```
 
-## 部署（尚未执行）
+## 部署状态
 
-需要 Workers 写权限的 API Token，且先取得明确批准：
+已部署：
+
+```text
+Worker: https://moyu-zjh.chenziyi17673412583.workers.dev
+Pages 代理: https://moyu-zjh-pages.pages.dev
+```
+
+部分网络会重置 `*.workers.dev` 的 TLS（`curl` 报 `Connection reset by peer`），但 `*.pages.dev` 可访问，所以 DSH 插件默认使用 Pages 代理；游戏逻辑仍在 Worker + DO 中。
+
+重新部署：
 
 ```bash
+cd game-worker
 npx wrangler deploy
 ```
 
-部署后地址形如：
+Pages 代理重新部署：
 
-```text
-https://moyu-zjh.<your-subdomain>.workers.dev
+```bash
+cd game-pages
+npx wrangler pages deploy . --project-name moyu-zjh-pages --commit-dirty=true
 ```
-
-然后在 DSH 插件 → 游戏 → 高级设置 → Cloudflare Worker 地址里填入该地址。
 
 ## 免费额度
 

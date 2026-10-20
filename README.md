@@ -56,7 +56,7 @@ DSH 的摸鱼套件。第一个模块是**伪装成构建日志的小说阅读�
 
 第二个模块是局域网联机的炸金花（只支持 DSH 插件客户端，不做独立网页版）。
 
-- **Cloudflare 模式（推荐）**：新建独立 Worker `moyu-zjh`，房间跑在 Durable Object 里；房主不用开电脑当服务器，也不需要局域网/隧道。高级设置里填 Worker 地址即可。
+- **Cloudflare 模式（推荐，已部署）**：独立 Worker `moyu-zjh` + Durable Object，房间跑在 Cloudflare；房主不用开电脑当服务器，也不需要局域网/隧道。默认地址是 Pages 代理 `https://moyu-zjh-pages.pages.dev`（因为部分网络会重置 `workers.dev`，Pages 入口可用）。高级设置里可以改地址。
 - **本地模式**：房主点「创建房间」后，插件会在本机端口（默认 `17890`）起服务，并生成 **邀请码**（形如 `MZJ1-...`）。
 - **加入房间**：朋友把邀请码发给你，粘贴到一个输入框里点「加入」即可；不需要手动填 IP、端口和房间号。同一 Wi-Fi 下不用公网地址。
 - **本地模式的公网联机**：点「一键公网隧道」（需要本机已安装 `cloudflared`，`brew install cloudflared`）。支持两种模式：
@@ -68,7 +68,7 @@ DSH 的摸鱼套件。第一个模块是**伪装成构建日志的小说阅读�
 - **规则**：2–6 人、闷牌/看牌、跟注/加注/弃牌/比牌；服务端权威，未看牌前不会把牌发给客户端。
 - **仅筹码/积分**，不涉及真钱、支付或兑换。
 - 首次升级到 0.10.x/0.11.x 需要**完全重启 DSH**：游戏服务器和公网隧道是 Host 新增能力，热更新只更新浏览器端。
-- Cloudflare 模式的具体本地开发/部署说明见 [`game-worker/README.md`](game-worker/README.md)；目前只做本地 `wrangler dev` 验证，**尚未部署到 Cloudflare**。
+- Cloudflare 模式的本地开发/部署说明见 [`game-worker/README.md`](game-worker/README.md)；线上入口是 `moyu-zjh-pages.pages.dev`，后端是 `moyu-zjh` Worker。
 
 ## 缓存、追更与书源管理
 
