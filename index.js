@@ -30,6 +30,7 @@ function statusFor(code) {
     case 'bad-request': return 400;
     case 'not-found': return 404;
     case 'too-large': return 413;
+    case 'fetch-timeout': return 504;
     case 'ai-unavailable': return 503;
     case 'ai-failed': return 502;
     default: return 500;
@@ -256,7 +257,7 @@ async function chapterHandler(ctx, url) {
 // ---------------------------------------------------------------------------
 
 const PROXY_MAX_BYTES = 8 * 1024 * 1024;
-const PROXY_TIMEOUT_MS = 15000;
+const PROXY_TIMEOUT_MS = 30000;
 
 function normalizeCharset(value) {
   const lower = String(value).toLowerCase();
@@ -299,6 +300,9 @@ async function proxyHandler(ctx, url) {
       },
     });
   } catch (error) {
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
+      throw failure('fetch-timeout', `站点响应超时（${Math.round(PROXY_TIMEOUT_MS / 1000)} 秒）`);
+    }
     throw failure('fetch-failed', String(error?.message ?? error));
   }
 

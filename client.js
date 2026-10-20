@@ -780,10 +780,25 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       return new DOMParser().parseFromString(String(text), 'text/html');
     }
 
+    /** Fetch one page through the Host proxy; retry once on transient timeouts. */
     async function proxyFetch(url, signal) {
-      const page = await getJson('moyu/online/proxy', { url }, signal);
-      if (page.status >= 400) throw new Error(`HTTP ${page.status}`);
-      return page;
+      let lastError;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          const page = await getJson('moyu/online/proxy', { url }, signal);
+          if (page.status >= 400) throw new Error(`HTTP ${page.status}`);
+          return page;
+        } catch (failure) {
+          lastError = failure;
+          const message = String(failure?.message ?? failure);
+          const retryable = /超时|timeout|aborted|fetch failed|network|ECONN|ENOTFOUND|HTTP 5\d\d/i.test(message);
+          if (!retryable || attempt === 1) break;
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+      const message = String(lastError?.message ?? lastError);
+      if (/超时|timeout|aborted/i.test(message)) throw new Error('站点响应超时，已重试一次；请稍后再试或换一个书源');
+      throw lastError;
     }
 
     async function searchSource(source, keyword, signal) {
