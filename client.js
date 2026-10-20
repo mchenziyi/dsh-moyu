@@ -18,9 +18,9 @@ window.__ModuleLoader__.load({
     const STORAGE_KEY = 'dsh.moyu.v1';
     const TOC_STORE_KEY = 'dsh.moyu.tocs.v1';
     const CHAPTER_STORE_KEY = 'dsh.moyu.chapters.v1';
-    const CACHED_CHAPTERS_PER_BOOK = 40;
+    const CACHED_CHAPTERS_PER_BOOK = 20;
     const CACHED_TOC_BOOKS = 20;
-    const CACHED_CHAPTER_BOOKS = 20;
+    const CACHED_CHAPTER_BOOKS = 10;
 
     /** Official DSH fish mark (viewBox 23.16 x 17.04), used as the entry glyph. */
     const FISH_LOGO_PATH = "M22.9168 1.43018C22.6713 1.31018 22.5658 1.53918 22.4223 1.65519C22.3733 1.69269 22.3318 1.74169 22.2903 1.78669C21.9317 2.1697 21.5127 2.42121 20.9657 2.39121C20.1657 2.34621 19.4827 2.59771 18.8787 3.20973C18.7502 2.45521 18.3236 2.0047 17.6746 1.71569C17.3351 1.56568 16.9916 1.41518 16.7536 1.08867C16.5876 0.856163 16.5421 0.597155 16.4591 0.341647C16.4061 0.187643 16.3536 0.0301382 16.1761 0.00363739C15.9836 -0.0263635 15.9081 0.135141 15.8326 0.270145C15.5306 0.822162 15.4136 1.43018 15.4251 2.0462C15.4516 3.43174 16.0366 4.53527 17.1991 5.3203C17.3311 5.4103 17.3651 5.5003 17.3236 5.63181C17.2441 5.90231 17.1501 6.16482 17.0671 6.43533C17.0141 6.60784 16.9351 6.64584 16.7501 6.57033C16.1121 6.30383 15.5611 5.90931 15.074 5.4328C14.2475 4.63328 13.5 3.75075 12.568 3.05973C12.349 2.89822 12.13 2.74822 11.9034 2.60522C10.9524 1.68169 12.028 0.923165 12.277 0.833162C12.5375 0.739159 12.3675 0.41615 11.5259 0.42015C10.6844 0.42365 9.91439 0.705658 8.93286 1.08117C8.78935 1.13767 8.63835 1.17867 8.48384 1.21267C7.59332 1.04367 6.66829 1.00617 5.70226 1.11517C3.88321 1.31768 2.43016 2.1777 1.36213 3.64575C0.0790928 5.4103 -0.222916 7.41536 0.146595 9.50642C0.535106 11.7105 1.66014 13.535 3.38869 14.9616C5.18125 16.4406 7.24581 17.1657 9.60138 17.0266C11.0319 16.9441 12.6245 16.7526 14.421 15.2321C14.874 15.4576 15.3496 15.5476 16.1381 15.6151C16.7456 15.6716 17.3306 15.5851 17.7836 15.4911C18.4931 15.3411 18.4441 14.6841 18.1876 14.5636C16.1081 13.595 16.5646 13.9891 16.1496 13.67C17.2061 12.42 18.8202 10.1979 19.3182 7.17235C19.3672 6.83834 19.4297 6.36783 19.4222 6.09732C19.4182 5.93231 19.4562 5.86831 19.6447 5.84931C20.1657 5.78931 20.6712 5.64681 21.1357 5.3913C22.4833 4.65528 23.0268 3.44624 23.1548 1.9972C23.1738 1.77569 23.1508 1.54668 22.9168 1.43018ZM11.1749 14.4736C9.15936 12.889 8.18184 12.3675 7.77832 12.39C7.40081 12.4125 7.46881 12.8445 7.55182 13.126C7.63882 13.404 7.75182 13.5955 7.91033 13.8396C8.01983 14.0011 8.09533 14.2411 7.80083 14.4216C7.15181 14.8231 6.02327 14.2866 5.97027 14.2601C4.65673 13.4865 3.5587 12.4655 2.78467 11.069C2.03715 9.72493 1.60314 8.28289 1.53164 6.74384C1.51264 6.37233 1.62214 6.24082 1.99215 6.17332C2.47916 6.08332 2.98118 6.06432 3.46769 6.13582C5.52476 6.43633 7.27581 7.35586 8.74385 8.8129C9.58188 9.64243 10.2159 10.634 10.8689 11.6025C11.5634 12.631 12.3105 13.611 13.262 14.4146C13.598 14.6961 13.866 14.9101 14.1225 15.0681C13.349 15.1546 12.058 15.1731 11.1749 14.4746L11.1749 14.4736ZM12.141 8.25988C12.141 8.09488 12.273 7.96338 12.439 7.96338C12.4765 7.96338 12.5105 7.97088 12.541 7.98188C12.5825 7.99688 12.6205 8.01938 12.6505 8.05338C12.7035 8.10588 12.7335 8.18088 12.7335 8.25988C12.7335 8.42489 12.6015 8.55639 12.4355 8.55639C12.2695 8.55639 12.141 8.42489 12.141 8.25988ZM15.1415 9.79893C14.949 9.87793 14.7565 9.94544 14.5715 9.95294C14.2845 9.96794 13.9715 9.85143 13.8015 9.70893C13.5375 9.48742 13.3485 9.36342 13.2695 8.97691C13.2355 8.8119 13.2545 8.55639 13.2845 8.40989C13.3525 8.09438 13.277 7.89187 13.0545 7.70787C12.8735 7.55786 12.643 7.51636 12.39 7.51636C12.2955 7.51636 12.209 7.47486 12.1445 7.44136C12.039 7.38886 11.9519 7.25735 12.035 7.09585C12.0615 7.04335 12.19 6.91584 12.22 6.89334C12.5635 6.69784 12.9595 6.76184 13.326 6.90834C13.6655 7.04735 13.9225 7.30236 14.292 7.66287C14.6695 8.09838 14.7375 8.21838 14.9525 8.54539C15.1225 8.8009 15.277 9.06341 15.3831 9.36392C15.4471 9.55142 15.3641 9.70493 15.1415 9.79893Z";
@@ -65,6 +65,21 @@ window.__ModuleLoader__.load({
       'shelf.tocRefreshing': '刷新中…',
       'shelf.tocRefreshed': '目录已更新：{count} 章（新增 {added} 章）',
       'shelf.tocUnchanged': '目录已是最新：{count} 章',
+      'shelf.allGroups': '全部书',
+      'shelf.noGroup': '未分组',
+      'shelf.newGroup': '新建分组',
+      'shelf.groupName': '分组名称',
+      'shelf.addGroup': '添加',
+      'shelf.batch': '批量管理',
+      'shelf.batchExit': '退出批量',
+      'shelf.selectAll': '全选',
+      'shelf.deleteSelected': '删除选中（{n}）',
+      'shelf.deleteConfirm': '再点一次确认删除',
+      'shelf.sortRecent': '最近阅读',
+      'shelf.sortAdded': '添加时间',
+      'shelf.sortTitle': '书名',
+      'shelf.sortProgress': '阅读进度',
+      'shelf.group': '分组',
       'settings.reading': '阅读设置',
       'settings.charsPerPage': '每页字数',
       'settings.charsPerPageHint': '状态栏一次显示这么多字，翻页按这个长度切分。',
@@ -116,6 +131,27 @@ window.__ModuleLoader__.load({
       'source.manualHide': '收起手动编辑',
       'source.searchThis': '搜书',
       'source.noSearchTag': '仅阅读（无搜索规则）',
+      'source.io': '导入 / 导出 / 健康检查',
+      'source.ioHide': '收起导入导出',
+      'source.export': '导出全部书源',
+      'source.exported': '已导出全部书源到文本框，可复制保存',
+      'source.import': '导入',
+      'source.importPlaceholder': '粘贴书源 JSON（单个或数组）；支持本插件格式和 Legado 书源的 CSS 子集',
+      'source.imported': '已导入 {ok} 个书源，失败 {failed} 个',
+      'source.importFailedDetail': '导入错误：{message}',
+      'source.healthKeyword': '检查关键词（默认「小说」）',
+      'source.check': '检查',
+      'source.checking': '检查中…',
+      'source.checkAll': '检查全部',
+      'source.healthOk': '「{name}」检查正常：搜索 {count} 条，目录 {chapters} 章',
+      'source.healthFailed': '「{name}」检查失败：{message}',
+      'source.healthNormal': '正常',
+      'source.healthFail': '异常',
+      'source.healthUnknown': '未检查',
+      'source.repair': 'AI 修复',
+      'source.repairing': '修复中…',
+      'source.repaired': '已用 AI 重新解析并修复书源',
+      'source.repairFailed': 'AI 修复失败：{message}',
       'source.detectSearch': '从首页识别搜索',
       'source.detected': '已识别搜索地址',
       'source.noSearchForm': '首页没有找到 GET 搜索表单，请手动填写搜索地址',
@@ -204,6 +240,13 @@ window.__ModuleLoader__.load({
       'search.needKeyword': '先输入书名或作者',
       'search.searchingAll': '正在搜索全部书源…',
       'search.partialFailed': '有 {failed}/{total} 个书源搜索失败，下面是其余结果。',
+      'search.sortDefault': '默认排序',
+      'search.sortTitle': '按书名',
+      'search.sortSource': '按来源',
+      'search.resultCount': '共 {count} 个结果，{groups} 本书',
+      'search.loadMore': '加载更多结果',
+      'search.loadingMore': '加载中…',
+      'search.pickSource': '这本书有多个来源，选择一个查看详情：',
       'search.button': '搜索',
       'search.searching': '搜索中…',
       'search.empty': '没有结果',
@@ -276,6 +319,21 @@ window.__ModuleLoader__.load({
       'shelf.tocRefreshing': 'Refreshing…',
       'shelf.tocRefreshed': 'Contents refreshed: {count} chapters ({added} new)',
       'shelf.tocUnchanged': 'Contents are up to date: {count} chapters',
+      'shelf.allGroups': 'All books',
+      'shelf.noGroup': 'Ungrouped',
+      'shelf.newGroup': 'New group',
+      'shelf.groupName': 'Group name',
+      'shelf.addGroup': 'Add',
+      'shelf.batch': 'Select',
+      'shelf.batchExit': 'Done',
+      'shelf.selectAll': 'Select all',
+      'shelf.deleteSelected': 'Delete selected ({n})',
+      'shelf.deleteConfirm': 'Click again to confirm',
+      'shelf.sortRecent': 'Recently read',
+      'shelf.sortAdded': 'Date added',
+      'shelf.sortTitle': 'Title',
+      'shelf.sortProgress': 'Progress',
+      'shelf.group': 'Group',
       'settings.reading': 'Reading',
       'settings.charsPerPage': 'Chars per page',
       'settings.charsPerPageHint': 'One page is this many characters in the status bar.',
@@ -328,6 +386,27 @@ window.__ModuleLoader__.load({
       'source.manualHide': 'Hide manual editor',
       'source.searchThis': 'Search',
       'source.noSearchTag': 'read-only (no search rule)',
+      'source.io': 'Import / export / health check',
+      'source.ioHide': 'Hide import/export',
+      'source.export': 'Export all sources',
+      'source.exported': 'Exported all sources to the text box',
+      'source.import': 'Import',
+      'source.importPlaceholder': 'Paste one source JSON or an array; supports this plugin format and the CSS subset of Legado sources',
+      'source.imported': 'Imported {ok} sources, {failed} failed',
+      'source.importFailedDetail': 'Import errors: {message}',
+      'source.healthKeyword': 'Check keyword (default: 小说)',
+      'source.check': 'Check',
+      'source.checking': 'Checking…',
+      'source.checkAll': 'Check all',
+      'source.healthOk': '"{name}" is healthy: {count} search results, {chapters} chapters',
+      'source.healthFailed': '"{name}" check failed: {message}',
+      'source.healthNormal': 'healthy',
+      'source.healthFail': 'broken',
+      'source.healthUnknown': 'not checked',
+      'source.repair': 'AI repair',
+      'source.repairing': 'Repairing…',
+      'source.repaired': 'Source re-parsed and repaired with AI',
+      'source.repairFailed': 'AI repair failed: {message}',
       'source.detectSearch': 'Detect search from homepage',
       'source.detected': 'Search URL detected',
       'source.noSearchForm': 'No GET search form on the homepage; fill the search URL manually',
@@ -415,6 +494,13 @@ window.__ModuleLoader__.load({
       'search.needKeyword': 'Type a title or author first',
       'search.searchingAll': 'Searching all sources…',
       'search.partialFailed': '{failed}/{total} sources failed; showing the rest.',
+      'search.sortDefault': 'Default order',
+      'search.sortTitle': 'By title',
+      'search.sortSource': 'By source',
+      'search.resultCount': '{count} results, {groups} books',
+      'search.loadMore': 'Load more results',
+      'search.loadingMore': 'Loading…',
+      'search.pickSource': 'This book has multiple sources; pick one to view details:',
       'search.button': 'Search',
       'search.searching': 'Searching…',
       'search.empty': 'No results',
@@ -487,6 +573,9 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
 .my-btn:disabled{opacity:.55;cursor:default}
 .my-btn.primary{background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);border-color:transparent}
 .my-book{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 4px;border-top:1px solid var(--dsw-alias-border-l1)}
+.my-cover{width:38px;height:52px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:600;flex:none;overflow:hidden}
+.my-select-sm{height:28px;font-size:11.5px}
+.my-check{flex:none}
 .my-book:first-of-type{border-top:0}
 .my-book-main{flex:1;min-width:0}
 .my-book-title{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -538,7 +627,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         books: [],
         progress: {},
         reading: { bookId: null, chapter: 0, page: 0 },
-        settings: { charsPerPage: 72, sources: [] },
+        settings: { charsPerPage: 72, sources: [], groups: [] },
       };
     }
 
@@ -561,6 +650,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           settings: (() => {
             const merged = Object.assign({}, base.settings, parsed.settings !== null && typeof parsed.settings === 'object' ? parsed.settings : {});
             merged.sources = Array.isArray(merged.sources) ? merged.sources.filter((source) => source !== null && typeof source === 'object') : [];
+            merged.groups = Array.isArray(merged.groups) ? merged.groups.filter((group) => typeof group === 'string' && group !== '') : [];
             return merged;
           })(),
         };
@@ -745,7 +835,11 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       if (!writeCacheStore(CHAPTER_STORE_KEY, all)) {
         const stale = Object.keys(book).sort((a, b) => (book[a].ts ?? 0) - (book[b].ts ?? 0));
         for (const key of stale.slice(0, Math.ceil(stale.length / 2))) delete book[key];
-        writeCacheStore(CHAPTER_STORE_KEY, all);
+        if (!writeCacheStore(CHAPTER_STORE_KEY, all)) {
+          const keep = Object.keys(all).slice(0, 5);
+          for (const id of Object.keys(all)) if (!keep.includes(id)) delete all[id];
+          if (!writeCacheStore(CHAPTER_STORE_KEY, all)) writeCacheStore(CHAPTER_STORE_KEY, {});
+        }
       }
     }
 
@@ -786,6 +880,57 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       };
       if (toc.list === '' || content.text === '') throw new Error('toc.list 和 content.text 必填');
       return { id, name, baseUrl: text(raw.baseUrl), search, toc, content };
+    }
+
+    function legadoSelector(value) {
+      if (typeof value !== 'string') return '';
+      let text = value.trim();
+      if (text === '') return '';
+      if (/^@css:/i.test(text)) text = text.slice(5);
+      else if (/@css:/i.test(text)) text = text.split('@css:').pop();
+      if (/@xpath:|@js:|@json:|<js>/i.test(text)) return '';
+      text = text.split('##')[0].trim();
+      return text;
+    }
+
+    /** Best-effort conversion of the CSS-based subset of a Legado book source. */
+    function convertLegadoSource(raw) {
+      const name = String(raw.bookSourceName ?? raw.name ?? raw.bookSourceUrl ?? '').trim();
+      const baseUrl = String(raw.bookSourceUrl ?? raw.baseUrl ?? '').trim();
+      let searchUrl = String(raw.searchUrl ?? '').trim();
+      if (name === '' || baseUrl === '' || searchUrl === '') {
+        throw new Error('缺少 bookSourceName / bookSourceUrl / searchUrl');
+      }
+      searchUrl = searchUrl
+        .replace(/\{\{\s*(key|searchKey|keyword|searchkey)\s*\}\}/gi, '{{keyword}}')
+        .replace(/\{\{\s*page\s*\}\}/gi, '1');
+      if (!searchUrl.includes('{{keyword}}')) throw new Error('searchUrl 缺少 keyword 占位符');
+      try { searchUrl = new URL(searchUrl, baseUrl).toString(); } catch { /* keep */ }
+      const rs = raw.ruleSearch !== null && typeof raw.ruleSearch === 'object' ? raw.ruleSearch : {};
+      const rt = raw.ruleToc !== null && typeof raw.ruleToc === 'object' ? raw.ruleToc : {};
+      const rc = raw.ruleContent !== null && typeof raw.ruleContent === 'object' ? raw.ruleContent : {};
+      return normalizeSource({
+        id: name,
+        name,
+        baseUrl,
+        search: {
+          url: searchUrl,
+          list: legadoSelector(rs.bookList),
+          title: legadoSelector(rs.name),
+          author: legadoSelector(rs.author),
+          bookUrl: legadoSelector(rs.bookUrl),
+        },
+        toc: {
+          list: legadoSelector(rt.chapterList),
+          title: legadoSelector(rt.chapterName),
+          chapterUrl: legadoSelector(rt.chapterUrl),
+          bookTitle: legadoSelector(rt.bookName),
+        },
+        content: {
+          text: legadoSelector(rc.content),
+          remove: [],
+        },
+      });
     }
 
     function emptySourceForm() {
@@ -924,15 +1069,27 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       throw lastError;
     }
 
-    async function searchSource(source, keyword, signal) {
+    async function searchSourceWithNext(source, keyword, signal, urlOverride) {
       if (source.search === null || source.search.url === '') throw new Error('这个书源没有配置搜索规则');
-      const url = expandTemplate(source.search.url, {
+      const url = urlOverride ?? expandTemplate(source.search.url, {
         base: source.baseUrl,
         keyword: encodeURIComponent(keyword.trim()),
       });
       const page = await proxyFetch(url, signal);
       const doc = parseHtml(page.text);
-      return probeSearchResults(source.search, doc, page.finalUrl);
+      return {
+        results: probeSearchResults(source.search, doc, page.finalUrl),
+        nextUrl: findNextSearchPage(doc, page.finalUrl),
+      };
+    }
+
+    function findNextSearchPage(doc, pageUrl) {
+      return findNextTocPage(doc, pageUrl, pageUrl, new Set());
+    }
+
+    async function searchSource(source, keyword, signal) {
+      const page = await searchSourceWithNext(source, keyword, signal);
+      return page.results;
     }
 
     /** Follow a conventional "next page" link on a paginated TOC. */
@@ -1311,6 +1468,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         title: toc.title,
         encoding: toc.encoding,
         chapterCount: Array.isArray(toc.chapters) ? toc.chapters.length : 1,
+        group: '',
+        lastReadAt: 0,
         addedAt: Date.now(),
       };
       const snap = store.get();
@@ -1343,6 +1502,8 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         chapterCount: existing?.chapterCount ?? 0,
         tocStatus: existing?.tocStatus === 'ready' ? 'ready' : 'loading',
         tocError: '',
+        group: existing?.group ?? '',
+        lastReadAt: existing?.lastReadAt ?? 0,
         addedAt: existing?.addedAt ?? Date.now(),
       });
       const books = [book, ...snap.books.filter((entry) => entry.id !== id)];
@@ -2104,7 +2265,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
     function openBook(id) {
       const snap = store.get();
       const saved = snap.progress[id] ?? { chapter: 0, page: 0 };
-      persistedPatch({ reading: { bookId: id, chapter: saved.chapter ?? 0, page: saved.page ?? 0 } });
+      const books = snap.books.map((book) => (book.id === id
+        ? Object.assign({}, book, { lastReadAt: Date.now() })
+        : book));
+      persistedPatch({ books, reading: { bookId: id, chapter: saved.chapter ?? 0, page: saved.page ?? 0 } });
     }
 
     function setReading(reading) {
@@ -2112,7 +2276,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const progress = Object.assign({}, snap.progress, {
         [reading.bookId]: { chapter: reading.chapter, page: reading.page },
       });
-      persistedPatch({ reading, progress });
+      const books = snap.books.map((book) => (book.id === reading.bookId
+        ? Object.assign({}, book, { lastReadAt: Date.now() })
+        : book));
+      persistedPatch({ reading, progress, books });
     }
 
     function setSettings(patch) {
@@ -2147,6 +2314,13 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [tocFilter, setTocFilter] = React.useState('');
       const [tocRefreshing, setTocRefreshing] = React.useState(false);
       const [tocNotice, setTocNotice] = React.useState('');
+      const [groupFilter, setGroupFilter] = React.useState('');
+      const [sortBy, setSortBy] = React.useState('recent');
+      const [batchMode, setBatchMode] = React.useState(false);
+      const [selected, setSelected] = React.useState([]);
+      const [showNewGroup, setShowNewGroup] = React.useState(false);
+      const [newGroup, setNewGroup] = React.useState('');
+      const [confirmDelete, setConfirmDelete] = React.useState(false);
       const [tocSelected, setTocSelected] = React.useState(0);
 
       const pages = React.useMemo(
@@ -2475,6 +2649,13 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [aiBook, setAiBook] = React.useState(null);
       const [aiSaving, setAiSaving] = React.useState(false);
       const [aiSearchProblem, setAiSearchProblem] = React.useState('');
+      const [ioOpen, setIoOpen] = React.useState(false);
+      const [ioText, setIoText] = React.useState('');
+      const [ioNotice, setIoNotice] = React.useState('');
+      const [ioError, setIoError] = React.useState('');
+      const [healthKeyword, setHealthKeyword] = React.useState('小说');
+      const [checkingId, setCheckingId] = React.useState('');
+      const [repairingId, setRepairingId] = React.useState('');
       const sources = snap.settings.sources;
 
       function setField(key, value) {
@@ -2656,12 +2837,131 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setTestOutput('');
       }
 
+      function healthText(source) {
+        if (source.search === null) return t('source.noSearchTag');
+        if (source.health === undefined) return t('source.healthUnknown');
+        return source.health.ok ? t('source.healthNormal') : t('source.healthFail');
+      }
+
+      function updateSourceHealth(id, health) {
+        const current = store.get().settings.sources;
+        setSettings({ sources: current.map((source) => (source.id === id ? Object.assign({}, source, { health }) : source)) });
+      }
+
+      async function checkSource(source) {
+        if (source.search === null) {
+          setIoError(t('source.healthFailed', { name: source.name, message: t('source.noSearchTag') }));
+          return;
+        }
+        setCheckingId(source.id);
+        setIoNotice('');
+        setIoError('');
+        try {
+          const page = await searchSourceWithNext(source, healthKeyword.trim() || '小说');
+          let chapters = 0;
+          if (page.results.length > 0) {
+            try {
+              const toc = await fetchTocPreview(source, page.results[0].bookUrl);
+              chapters = toc.chapters.length;
+            } catch {
+              chapters = 0;
+            }
+          }
+          updateSourceHealth(source.id, { ok: true, count: page.results.length, chapters, at: Date.now(), message: '' });
+          setIoNotice(t('source.healthOk', { name: source.name, count: page.results.length, chapters }));
+        } catch (failure) {
+          const message = String(failure?.message ?? failure);
+          updateSourceHealth(source.id, { ok: false, at: Date.now(), message });
+          setIoError(t('source.healthFailed', { name: source.name, message }));
+        } finally {
+          setCheckingId('');
+        }
+      }
+
+      async function checkAllSources() {
+        for (const source of sources.filter((entry) => entry.search !== null)) {
+          await checkSource(source);
+        }
+      }
+
+      async function repairSource(source) {
+        if (source.baseUrl === '') {
+          setIoError(t('source.repairFailed', { message: '缺少站点地址' }));
+          return;
+        }
+        setRepairingId(source.id);
+        setIoError('');
+        setIoNotice('');
+        try {
+          const parsed = await parseSourceWithAi(source.baseUrl, healthKeyword.trim() || '小说');
+          const rule = Object.assign({}, parsed.rule, { id: source.id, name: source.name });
+          setSettings({ sources: [rule, ...store.get().settings.sources.filter((entry) => entry.id !== source.id)] });
+          setIoNotice(t('source.repaired'));
+        } catch (failure) {
+          setIoError(t('source.repairFailed', { message: String(failure?.message ?? failure) }));
+        } finally {
+          setRepairingId('');
+        }
+      }
+
+      function exportSources() {
+        setIoText(JSON.stringify(sources.map(({ health, ...rest }) => rest), null, 2));
+        setIoNotice(t('source.exported'));
+        setIoError('');
+      }
+
+      function importSources() {
+        setIoNotice('');
+        setIoError('');
+        let parsed;
+        try {
+          parsed = JSON.parse(ioText);
+        } catch (failure) {
+          setIoError(t('source.importFailedDetail', { message: String(failure?.message ?? failure) }));
+          return;
+        }
+        const list = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.sources) ? parsed.sources : [parsed]);
+        const imported = [];
+        const errors = [];
+        let failed = 0;
+        for (const item of list) {
+          try {
+            const rule = item !== null && typeof item === 'object' && (item.bookSourceName !== undefined || item.ruleSearch !== undefined)
+              ? convertLegadoSource(item)
+              : normalizeSource(item);
+            imported.push(rule);
+          } catch (failure) {
+            failed += 1;
+            if (errors.length < 3) errors.push(String(failure?.message ?? failure));
+          }
+        }
+        if (imported.length > 0) {
+          const ids = new Set(imported.map((source) => source.id));
+          setSettings({ sources: [...imported, ...store.get().settings.sources.filter((source) => !ids.has(source.id))] });
+        }
+        setIoNotice(t('source.imported', { ok: imported.length, failed }));
+        if (failed > 0) setIoError(t('source.importFailedDetail', { message: errors.join('; ') }));
+      }
+
       const sourceRows = sources.map((source) => h('div', { key: source.id, className: 'my-book' },
         h('div', { className: 'my-book-main' },
           h('div', { className: 'my-book-title' }, source.name),
           h('div', { className: 'my-book-meta' },
-            (source.baseUrl === '' ? source.id : source.baseUrl)
-            + (source.search === null ? ` · ${t('source.noSearchTag')}` : ''))),
+            (source.baseUrl === '' ? source.id : source.baseUrl) + ` · ${healthText(source)}`)),
+        source.search === null
+          ? null
+          : h('button', {
+            className: 'my-btn',
+            disabled: checkingId === source.id,
+            onClick: () => checkSource(source),
+          }, checkingId === source.id ? t('source.checking') : t('source.check')),
+        source.health !== undefined && source.health.ok === false
+          ? h('button', {
+            className: 'my-btn',
+            disabled: repairingId === source.id,
+            onClick: () => repairSource(source),
+          }, repairingId === source.id ? t('source.repairing') : t('source.repair'))
+          : null,
         source.search === null
           ? null
           : h('button', { className: 'my-btn', onClick: () => onSearch(source.id, '') }, t('source.searchThis')),
@@ -2706,6 +3006,37 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                 aiSaving ? t('ai.saving') : t('ai.saveSearch')))),
 
         sources.length === 0 ? h('div', { className: 'my-sub' }, t('source.empty')) : sourceRows,
+
+        h('div', { className: 'my-form-section' },
+          h('button', {
+            className: 'my-btn',
+            onClick: () => setIoOpen((value) => !value),
+          }, ioOpen ? t('source.ioHide') : t('source.io')),
+          ioOpen
+            ? h('div', null,
+              h('textarea', {
+                className: 'my-textarea',
+                value: ioText,
+                placeholder: t('source.importPlaceholder'),
+                onChange: (event) => setIoText(event.currentTarget.value),
+              }),
+              h('div', { className: 'my-row' },
+                h('input', {
+                  className: 'my-input-path',
+                  value: healthKeyword,
+                  placeholder: t('source.healthKeyword'),
+                  onChange: (event) => setHealthKeyword(event.currentTarget.value),
+                }),
+                h('button', { className: 'my-btn', onClick: exportSources }, t('source.export')),
+                h('button', { className: 'my-btn', disabled: ioText.trim() === '', onClick: importSources }, t('source.import')),
+                h('button', {
+                  className: 'my-btn',
+                  disabled: checkingId !== '',
+                  onClick: checkAllSources,
+                }, checkingId === '' ? t('source.checkAll') : t('source.checking'))),
+              ioNotice === '' ? null : h('div', { className: 'my-sub' }, ioNotice),
+              ioError === '' ? null : h('div', { className: 'my-error' }, ioError))
+            : null),
 
         h('button', { className: 'my-btn', onClick: () => setShowManual((value) => !value) },
           showManual ? t('source.manualHide') : t('source.manual')),
@@ -2783,6 +3114,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [busy, setBusy] = React.useState(false);
       const [error, setError] = React.useState('');
       const [results, setResults] = React.useState(null);
+      const [nextBySource, setNextBySource] = React.useState({});
+      const [moreBusy, setMoreBusy] = React.useState(false);
+      const [searchSort, setSearchSort] = React.useState('default');
+      const [detailGroup, setDetailGroup] = React.useState(null);
       const [addNotice, setAddNotice] = React.useState('');
       const [detailResult, setDetailResult] = React.useState(null);
       const [detailToc, setDetailToc] = React.useState(null);
@@ -2816,16 +3151,26 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         setResults(null);
         setAddNotice('');
         const settled = await Promise.allSettled(targets.map(async (source) => {
-          const found = await searchSource(source, text);
-          return found.map((item) => Object.assign({}, item, { sourceId: source.id, sourceName: source.name }));
+          const page = await searchSourceWithNext(source, text);
+          return {
+            results: page.results.map((item) => Object.assign({}, item, { sourceId: source.id, sourceName: source.name })),
+            sourceId: source.id,
+            nextUrl: page.nextUrl ?? '',
+          };
         }));
         const merged = [];
+        const next = {};
         let failed = 0;
         for (const item of settled) {
-          if (item.status === 'fulfilled') merged.push(...item.value);
-          else failed += 1;
+          if (item.status !== 'fulfilled') {
+            failed += 1;
+            continue;
+          }
+          merged.push(...item.value.results);
+          if (item.value.nextUrl !== '') next[item.value.sourceId] = item.value.nextUrl;
         }
         setResults(merged);
+        setNextBySource(next);
         if (failed > 0) setError(t('search.partialFailed', { failed, total: targets.length }));
         setBusy(false);
       }
@@ -2837,6 +3182,44 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           return;
         }
         await searchEverywhere(text, sourceFilter);
+      }
+
+      async function loadMore() {
+        const entries = Object.entries(nextBySource).filter(([, url]) => url !== '');
+        if (entries.length === 0 || moreBusy) return;
+        setMoreBusy(true);
+        setError('');
+        const settled = await Promise.allSettled(entries.map(async ([sourceId, url]) => {
+          const source = sources.find((entry) => entry.id === sourceId);
+          if (source === undefined) throw new Error(t('find.sourceMissing'));
+          const page = await searchSourceWithNext(source, keyword.trim(), undefined, url);
+          return { sourceId, page };
+        }));
+        const merged = results === null ? [] : [...results];
+        const seen = new Set(merged.map((item) => `${item.sourceId}:${item.bookUrl}`));
+        const next = Object.assign({}, nextBySource);
+        let failed = 0;
+        for (const item of settled) {
+          if (item.status !== 'fulfilled') {
+            failed += 1;
+            continue;
+          }
+          const source = sources.find((entry) => entry.id === item.value.sourceId);
+          for (const result of item.value.page.results) {
+            const key = `${item.value.sourceId}:${result.bookUrl}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            merged.push(Object.assign({}, result, {
+              sourceId: item.value.sourceId,
+              sourceName: source?.name ?? item.value.sourceId,
+            }));
+          }
+          next[item.value.sourceId] = item.value.page.nextUrl ?? '';
+        }
+        setResults(merged);
+        setNextBySource(next);
+        if (failed > 0) setError(t('search.partialFailed', { failed, total: entries.length }));
+        setMoreBusy(false);
       }
 
       React.useEffect(() => {
@@ -2875,6 +3258,33 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         }
       }
 
+      function openGroup(group) {
+        setDetailGroup(group);
+        setDetailError('');
+        setDetailToc(null);
+        setDetailResult(null);
+        if (group.entries.length === 1) openDetail(group.entries[0]);
+      }
+
+      function closeDetail() {
+        setDetailResult(null);
+        setDetailGroup(null);
+        setDetailToc(null);
+        setDetailError('');
+      }
+
+      function buildGroups(items) {
+        const map = new Map();
+        for (const item of items) {
+          const title = String(item.title ?? '').replace(/^\s*\[[^\]]+\]\s*/, '').trim() || item.bookUrl;
+          const author = String(item.author ?? '').trim();
+          const key = `${title.toLowerCase()}|${author.toLowerCase()}`;
+          if (!map.has(key)) map.set(key, { key, title, author, entries: [] });
+          map.get(key).entries.push(item);
+        }
+        return [...map.values()];
+      }
+
       function addResult(result, preview) {
         const source = sources.find((entry) => entry.id === result.sourceId);
         if (source === undefined) {
@@ -2884,6 +3294,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         const bookId = addOnlineBookPending(source, result);
         if (preview !== null && preview !== undefined) updateOnlineBookToc(bookId, preview);
         setDetailResult(null);
+        setDetailGroup(null);
         setDetailToc(null);
         setAddNotice(t('find.addedBackground', { name: result.title || result.bookUrl }));
         fetchToc(source, result.bookUrl)
@@ -2921,16 +3332,45 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         }
       }
 
-      const resultRows = results === null
+      const searchGroups = results === null ? null : buildGroups(results);
+      const sortedGroups = searchGroups === null ? null : [...searchGroups].sort((a, b) => {
+        if (searchSort === 'title') return a.title.localeCompare(b.title, 'zh');
+        if (searchSort === 'source') {
+          const sourceA = a.entries[0]?.sourceName ?? '';
+          const sourceB = b.entries[0]?.sourceName ?? '';
+          return sourceA.localeCompare(sourceB, 'zh');
+        }
+        return 0;
+      });
+      const groupRows = sortedGroups === null
         ? null
-        : (results.length === 0
+        : (sortedGroups.length === 0
           ? h('div', { className: 'my-sub' }, t('search.empty'))
-          : results.map((result) => h('div', { key: `${result.sourceId}:${result.bookUrl}`, className: 'my-book' },
-            h('div', { className: 'my-book-main' },
-              h('div', { className: 'my-book-title' }, result.title || result.bookUrl),
-              h('div', { className: 'my-book-meta' },
-                result.author === '' ? t('book.source', { name: result.sourceName }) : `${result.author} · ${t('book.source', { name: result.sourceName })}`)),
-            h('button', { className: 'my-btn', onClick: () => openDetail(result) }, t('find.detail')))));
+          : sortedGroups.map((group) => {
+            const sourceNames = [...new Set(group.entries.map((entry) => entry.sourceName))];
+            return h('div', { key: group.key, className: 'my-book' },
+              h('div', { className: 'my-book-main' },
+                h('div', { className: 'my-book-title' }, group.title),
+                h('div', { className: 'my-book-meta' },
+                  [group.author, sourceNames.join(' / ')].filter((value) => value !== '').join(' · '))),
+              h('button', { className: 'my-btn', onClick: () => openGroup(group) }, t('find.detail')));
+          }));
+
+      const hasMore = Object.keys(nextBySource).some((id) => nextBySource[id] !== '');
+      const detailPicker = detailGroup !== null && detailResult === null
+        ? h('div', { className: 'my-detail' },
+          h('div', { className: 'my-detail-head' },
+            h('strong', null, t('find.detailTitle')),
+            h('button', { className: 'my-btn', onClick: closeDetail }, t('find.detailBack'))),
+          h('div', { className: 'my-book-title' }, detailGroup.title),
+          detailGroup.author === '' ? null : h('div', { className: 'my-book-meta' }, detailGroup.author),
+          h('div', { className: 'my-sub' }, t('search.pickSource')),
+          h('div', { className: 'my-row' }, detailGroup.entries.map((entry) => h('button', {
+            key: `${entry.sourceId}:${entry.bookUrl}`,
+            className: 'my-btn',
+            onClick: () => openDetail(entry),
+          }, entry.sourceName))))
+        : null;
 
       const searchBlock = searchable.length === 0
         ? h('div', null,
@@ -2952,16 +3392,40 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
             }, [h('option', { key: '', value: '' }, t('search.allSources'))].concat(
               searchable.map((source) => h('option', { key: source.id, value: source.id }, source.name)),
             )),
+            h('select', {
+              className: 'my-select',
+              value: searchSort,
+              onChange: (event) => setSearchSort(event.currentTarget.value),
+            }, [
+              h('option', { key: 'default', value: 'default' }, t('search.sortDefault')),
+              h('option', { key: 'title', value: 'title' }, t('search.sortTitle')),
+              h('option', { key: 'source', value: 'source' }, t('search.sortSource')),
+            ]),
             h('button', { className: 'my-btn primary', disabled: busy, onClick: runSearch },
               busy ? t('search.searchingAll') : t('search.button'))),
           error === '' ? null : h('div', { className: 'my-error' }, error),
           addNotice === '' ? null : h('div', { className: 'my-sub' }, addNotice),
-          detailResult === null
-            ? resultRows
-            : h('div', { className: 'my-detail' },
-              h('div', { className: 'my-detail-head' },
-                h('strong', null, t('find.detailTitle')),
-                h('button', { className: 'my-btn', onClick: () => setDetailResult(null) }, t('find.detailBack'))),
+          detailResult === null && detailGroup !== null
+            ? detailPicker
+            : (detailResult === null
+              ? h(React.Fragment, null,
+                results === null ? null : h('div', { className: 'my-sub' }, t('search.resultCount', {
+                  count: results.length,
+                  groups: sortedGroups === null ? 0 : sortedGroups.length,
+                })),
+                groupRows,
+                hasMore
+                  ? h('div', { className: 'my-row' },
+                    h('button', {
+                      className: 'my-btn',
+                      disabled: moreBusy,
+                      onClick: loadMore,
+                    }, moreBusy ? t('search.loadingMore') : t('search.loadMore')))
+                  : null)
+              : h('div', { className: 'my-detail' },
+                h('div', { className: 'my-detail-head' },
+                  h('strong', null, t('find.detailTitle')),
+                  h('button', { className: 'my-btn', onClick: closeDetail }, t('find.detailBack'))),
               h('div', { className: 'my-book-title' }, detailResult.title || detailResult.bookUrl),
               h('div', { className: 'my-book-meta' },
                 detailResult.author === '' ? detailResult.sourceName : `${detailResult.author} · ${detailResult.sourceName}`),
@@ -2976,7 +3440,7 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                   })
                   : t('find.detailPreview', { count: detailToc.chapters.length })),
                 h('div', { className: 'my-detail-chapters' }, detailToc.chapters.slice(0, 5).map((chapter) => h('div', { key: chapter.url }, chapter.title))),
-                h('button', { className: 'my-btn primary', disabled: detailBusy, onClick: () => addResult(detailResult, detailToc) }, t('find.detailAdd')))));
+                h('button', { className: 'my-btn primary', disabled: detailBusy, onClick: () => addResult(detailResult, detailToc) }, t('find.detailAdd'))))));
 
       return h('div', { className: 'my-card' },
         h('h3', null, t('find.title')),
@@ -3030,6 +3494,13 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [tocFilter, setTocFilter] = React.useState('');
       const [tocRefreshing, setTocRefreshing] = React.useState(false);
       const [tocNotice, setTocNotice] = React.useState('');
+      const [groupFilter, setGroupFilter] = React.useState('');
+      const [sortBy, setSortBy] = React.useState('recent');
+      const [batchMode, setBatchMode] = React.useState(false);
+      const [selected, setSelected] = React.useState([]);
+      const [showNewGroup, setShowNewGroup] = React.useState(false);
+      const [newGroup, setNewGroup] = React.useState('');
+      const [confirmDelete, setConfirmDelete] = React.useState(false);
 
       async function toggleShelfToc(book) {
         if (tocBookId === book.id) {
@@ -3083,6 +3554,46 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         }
       }
 
+      function coverStyle(title) {
+        const value = String(title ?? '?');
+        let hash = 0;
+        for (let index = 0; index < value.length; index += 1) hash = (hash * 31 + value.charCodeAt(index)) % 360;
+        return { background: `linear-gradient(135deg, hsl(${hash} 60% 58%), hsl(${(hash + 45) % 360} 55% 42%))` };
+      }
+
+      function assignGroup(bookId, group) {
+        const current = store.get();
+        const books = current.books.map((book) => (book.id === bookId ? Object.assign({}, book, { group }) : book));
+        persistedPatch({ books });
+      }
+
+      function addGroup() {
+        const name = newGroup.trim();
+        if (name === '') return;
+        const groups = snap.settings.groups ?? [];
+        if (!groups.includes(name)) setSettings({ groups: [...groups, name] });
+        setNewGroup('');
+        setShowNewGroup(false);
+      }
+
+      function toggleSelected(bookId) {
+        setSelected((previous) => (previous.includes(bookId)
+          ? previous.filter((id) => id !== bookId)
+          : [...previous, bookId]));
+      }
+
+      function removeSelected() {
+        if (!confirmDelete) {
+          setConfirmDelete(true);
+          setTimeout(() => setConfirmDelete(false), 4000);
+          return;
+        }
+        for (const id of selected) removeBook(id);
+        setSelected([]);
+        setBatchMode(false);
+        setConfirmDelete(false);
+      }
+
       function startFromChapter(book, index) {
         openBook(book.id);
         setReading({ bookId: book.id, chapter: index, page: 0 });
@@ -3104,7 +3615,23 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
         }
       }
 
-      const books = snap.books.map((book) => {
+      const groups = snap.settings.groups ?? [];
+      const bookPercent = (book) => {
+        const progress = snap.progress[book.id] ?? { chapter: 0, page: 0 };
+        const total = Math.max(1, book.chapterCount ?? 1);
+        return Math.min(100, Math.round(((progress.chapter + 1) / total) * 100));
+      };
+      const visibleBooks = snap.books
+        .filter((book) => groupFilter === ''
+          || (groupFilter === '__none' ? !book.group : book.group === groupFilter))
+        .sort((a, b) => {
+          if (sortBy === 'title') return String(a.title).localeCompare(String(b.title), 'zh');
+          if (sortBy === 'added') return (b.addedAt ?? 0) - (a.addedAt ?? 0);
+          if (sortBy === 'progress') return bookPercent(b) - bookPercent(a);
+          return (b.lastReadAt ?? b.addedAt ?? 0) - (a.lastReadAt ?? a.addedAt ?? 0);
+        });
+
+      const books = visibleBooks.map((book) => {
         const progress = snap.progress[book.id] ?? { chapter: 0, page: 0 };
         const source = snap.settings.sources.find((entry) => entry.id === book.sourceId);
         const totalChapters = Math.max(1, book.chapterCount ?? 1);
@@ -3154,6 +3681,15 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           h('div', { className: 'my-toc-foot' }, t('shelf.tocHint')));
         return h(React.Fragment, { key: book.id },
           h('div', { className: 'my-book' },
+            batchMode
+              ? h('input', {
+                type: 'checkbox',
+                className: 'my-check',
+                checked: selected.includes(book.id),
+                onChange: () => toggleSelected(book.id),
+              })
+              : null,
+            h('div', { className: 'my-cover', style: coverStyle(book.title) }, String(book.title ?? '?').trim().slice(0, 1)),
             h('div', { className: 'my-book-main' },
               h('div', { className: 'my-book-title' }, book.title),
               h('div', { className: 'my-book-meta' },
@@ -3164,6 +3700,13 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
                 book.kind === 'online' && book.tocStatus === 'loading' ? ` · ${t('book.tocLoading')}` : '',
                 book.kind === 'online' && book.tocStatus === 'partial' ? ` · ${t('book.tocPartial')}` : '',
                 book.kind === 'online' && book.tocStatus === 'error' ? ` · ${t('book.tocError')}` : '')),
+            h('select', {
+              className: 'my-select my-select-sm',
+              value: book.group ?? '',
+              onChange: (event) => assignGroup(book.id, event.currentTarget.value),
+            }, [h('option', { key: '', value: '' }, t('shelf.noGroup'))].concat(
+              groups.map((group) => h('option', { key: group, value: group }, group)),
+            )),
             h('button', {
               className: 'my-btn primary',
               onClick: () => { openBook(book.id); store.set({ active: true }); },
@@ -3192,6 +3735,56 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
           h('button', { className: 'my-btn primary', disabled: busy, onClick: runImport },
             busy ? t('settings.importing') : t('settings.import'))),
         error === '' ? null : h('div', { className: 'my-error' }, error),
+        h('div', { className: 'my-row' },
+          h('select', {
+            className: 'my-select',
+            value: groupFilter,
+            onChange: (event) => setGroupFilter(event.currentTarget.value),
+          }, [h('option', { key: '', value: '' }, t('shelf.allGroups')),
+            h('option', { key: '__none', value: '__none' }, t('shelf.noGroup'))].concat(
+            groups.map((group) => h('option', { key: group, value: group }, group)),
+          )),
+          h('select', {
+            className: 'my-select',
+            value: sortBy,
+            onChange: (event) => setSortBy(event.currentTarget.value),
+          }, [
+            h('option', { key: 'recent', value: 'recent' }, t('shelf.sortRecent')),
+            h('option', { key: 'added', value: 'added' }, t('shelf.sortAdded')),
+            h('option', { key: 'title', value: 'title' }, t('shelf.sortTitle')),
+            h('option', { key: 'progress', value: 'progress' }, t('shelf.sortProgress')),
+          ]),
+          h('button', { className: 'my-btn', onClick: () => setShowNewGroup((value) => !value) }, t('shelf.newGroup')),
+          h('button', {
+            className: 'my-btn',
+            onClick: () => { setBatchMode((value) => !value); setSelected([]); setConfirmDelete(false); },
+          }, batchMode ? t('shelf.batchExit') : t('shelf.batch'))),
+        showNewGroup
+          ? h('div', { className: 'my-row' },
+            h('input', {
+              className: 'my-input-path',
+              value: newGroup,
+              placeholder: t('shelf.groupName'),
+              onChange: (event) => setNewGroup(event.currentTarget.value),
+              onKeyDown: (event) => { if (event.key === 'Enter') addGroup(); },
+            }),
+            h('button', { className: 'my-btn primary', onClick: addGroup }, t('shelf.addGroup')))
+          : null,
+        batchMode
+          ? h('div', { className: 'my-row' },
+            h('label', { className: 'my-sub' },
+              h('input', {
+                type: 'checkbox',
+                checked: visibleBooks.length > 0 && selected.length === visibleBooks.length,
+                onChange: () => setSelected(selected.length === visibleBooks.length ? [] : visibleBooks.map((book) => book.id)),
+              }),
+              ` ${t('shelf.selectAll')}`),
+            h('button', {
+              className: 'my-btn',
+              disabled: selected.length === 0,
+              onClick: removeSelected,
+            }, confirmDelete ? t('shelf.deleteConfirm') : t('shelf.deleteSelected', { n: selected.length })))
+          : null,
         books.length === 0
           ? h('div', null,
             h('div', { className: 'my-sub' }, t('shelf.emptyHint')),
@@ -3238,6 +3831,10 @@ body[data-moyu-reading="true"] button[aria-label*="context used"]{display:none !
       const [busy, setBusy] = React.useState(false);
       const [error, setError] = React.useState('');
       const [results, setResults] = React.useState(null);
+      const [nextBySource, setNextBySource] = React.useState({});
+      const [moreBusy, setMoreBusy] = React.useState(false);
+      const [searchSort, setSearchSort] = React.useState('default');
+      const [detailGroup, setDetailGroup] = React.useState(null);
       const effective = sources.some((source) => source.id === sourceId) ? sourceId : (sources[0]?.id ?? '');
 
       async function run() {
